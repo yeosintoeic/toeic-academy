@@ -71,3 +71,30 @@ export async function PUT(
 
   return Response.json({ success: true, plan: updated.plan, planExpiresAt: updated.planExpiresAt });
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return Response.json({ error: "권한 없음" }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  const sessions = await prisma.testSession.findMany({
+    where: { userId: id },
+    select: { id: true },
+  });
+  const sessionIds = sessions.map((s) => s.id);
+
+  if (sessionIds.length > 0) {
+    await prisma.testAnswer.deleteMany({ where: { sessionId: { in: sessionIds } } });
+    await prisma.testSession.deleteMany({ where: { userId: id } });
+  }
+
+  await prisma.user.delete({ where: { id } });
+
+  return Response.json({ success: true });
+}

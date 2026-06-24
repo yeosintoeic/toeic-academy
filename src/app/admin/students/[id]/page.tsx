@@ -43,6 +43,7 @@ export default function StudentDetailPage() {
   const [editPlan, setEditPlan] = useState("");
   const [editExpiry, setEditExpiry] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -55,6 +56,18 @@ export default function StudentDetailPage() {
         setLoading(false);
       });
   }, [id]);
+
+  async function handleDelete() {
+    if (!confirm(`${student?.name} 계정을 삭제하시겠습니까? 모든 응시 기록도 함께 삭제됩니다.`)) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/students/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/admin");
+    } else {
+      setDeleting(false);
+      setMsg("삭제 중 오류가 발생했습니다.");
+    }
+  }
 
   async function handleSavePlan() {
     setSaving(true);
@@ -102,13 +115,22 @@ export default function StudentDetailPage() {
               <p className="text-sm text-slate-500">{student.email}</p>
               <p className="text-xs text-slate-400 mt-1">가입일: {new Date(student.createdAt).toLocaleDateString("ko-KR")}</p>
             </div>
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-              student.plan === "NONE" ? "bg-slate-100 text-slate-500" :
-              isExpired ? "bg-red-100 text-red-500" :
-              "bg-blue-100 text-blue-700"
-            }`}>
-              {PLAN_LABEL[student.plan]}{isExpired ? " (만료)" : ""}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                student.plan === "NONE" ? "bg-slate-100 text-slate-500" :
+                isExpired ? "bg-red-100 text-red-500" :
+                "bg-blue-100 text-blue-700"
+              }`}>
+                {PLAN_LABEL[student.plan]}{isExpired ? " (만료)" : ""}
+              </span>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 transition-colors disabled:opacity-50"
+              >
+                {deleting ? "삭제 중..." : "계정 삭제"}
+              </button>
+            </div>
           </div>
 
           <div className="border-t border-slate-100 pt-5">
