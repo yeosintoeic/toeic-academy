@@ -21,9 +21,14 @@ const PLAN_LABEL: Record<string, string> = {
   ALL: "전체 (강의 + 모의고사 + 단어장)",
 };
 
+function randomCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
 export default function AdminCodesPage() {
   const [codes, setCodes] = useState<RegisterCode[]>([]);
-  const [form, setForm] = useState({ code: "", plan: "FULL", durationDays: 30, label: "" });
+  const [form, setForm] = useState({ code: "", plan: "ALL", durationDays: 30, label: "" });
+  const [bulk, setBulk] = useState(1);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -35,24 +40,50 @@ export default function AdminCodesPage() {
 
   useEffect(() => { load(); }, []);
 
+  function autoCode() {
+    setForm((f) => ({ ...f, code: randomCode() }));
+  }
+
   async function handleCreate(e: { preventDefault(): void }) {
     e.preventDefault();
     setSaving(true);
     setMessage("");
-    const res = await fetch("/api/admin/codes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    setSaving(false);
-    if (res.ok) {
-      setMessage("코드가 생성되었습니다.");
-      setForm({ code: "", plan: "FULL", durationDays: 30, label: "" });
-      load();
-    } else {
-      setMessage(data.error || "오류가 발생했습니다.");
+
+    const count = Math.min(Math.max(1, bulk), 50);
+
+    if (count === 1) {
+      const res = await fetch("/api/admin/codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      setSaving(false);
+      if (res.ok) {
+        setMessage("코드가 생성되었습니다.");
+        setForm((f) => ({ ...f, code: "" }));
+        load();
+      } else {
+        setMessage(data.error || "오류가 발생했습니다.");
+      }
+      return;
     }
+
+    // 여러 개 생성
+    let success = 0;
+    for (let i = 0; i < count; i++) {
+      const code = form.code ? `${form.code}-${i + 1}` : randomCode();
+      const res = await fetch("/api/admin/codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, code }),
+      });
+      if (res.ok) success++;
+    }
+    setSaving(false);
+    setMessage(`${success}개 코드가 생성되었습니다.`);
+    setForm((f) => ({ ...f, code: "" }));
+    load();
   }
 
   async function handleDelete(id: string) {
@@ -69,9 +100,8 @@ export default function AdminCodesPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8">
-        {/* 코드 생성 */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
-          <h2 className="font-semibold text-slate-800 mb-4">새 코드 생성</h2>
+          <h2 className="font-semibold text-slate-800 mb-4">코드 생성</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -94,32 +124,57 @@ export default function AdminCodesPage() {
                 <input
                   type="number"
                   value={form.durationDays}
-                  onChange={(e) => setForm({ ...form, durationDays: Number(e.target.value) })}
+                  onChange={(e) => setForm({ ...form, durationDays: Math.min(Number(e.target.value), 36500) })}
                   min={1}
+                  max={36500}
                   required
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">코드</label>
-              <input
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                required
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="예: yeosin-2025-01"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">코드 (비우면 자동생성)</label>
+                <div className="flex gap-2">
+                  <input
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    placeholder="자동생성 또는 직접 입력"
+                  />
+                  <button
+                    type="button"
+                    onClick={autoCode}
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50"
+                  >
+                    랜덤
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">생성 개수</label>
+                <input
+                  type="number"
+                  value={bulk}
+                  onChange={(e) => setBulk(Math.min(Number(e.target.value), 50))}
+                  min={1}
+                  max={50}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
             </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">메모 (선택)</label>
               <input
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="예: 홍길동 3개월 결제"
+                placeholder="예: 7월 수강생"
               />
             </div>
+
             {message && (
               <p className={`text-sm ${message.includes("오류") || message.includes("존재") ? "text-red-500" : "text-green-600"}`}>
                 {message}
@@ -128,14 +183,13 @@ export default function AdminCodesPage() {
             <button
               type="submit"
               disabled={saving}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="w-full bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              {saving ? "생성 중..." : "코드 생성"}
+              {saving ? "생성 중..." : bulk > 1 ? `${bulk}개 한번에 생성` : "코드 생성"}
             </button>
           </form>
         </div>
 
-        {/* 코드 목록 */}
         <div className="bg-white rounded-xl border border-slate-200">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="font-semibold text-slate-800">코드 목록</h2>
@@ -159,7 +213,7 @@ export default function AdminCodesPage() {
                   <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50">
                     <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">{c.code}</td>
                     <td className="px-4 py-3 text-sm">{PLAN_LABEL[c.plan] ?? c.plan}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{c.durationDays}일</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{c.durationDays >= 36500 ? "무제한" : `${c.durationDays}일`}</td>
                     <td className="px-4 py-3 text-sm text-slate-400">{c.label || "-"}</td>
                     <td className="px-4 py-3">
                       <button onClick={() => handleDelete(c.id)} className="text-xs text-red-400 hover:text-red-600">삭제</button>
