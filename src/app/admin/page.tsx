@@ -40,10 +40,8 @@ export default function AdminPage() {
   const [scores, setScores] = useState<Score[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
   const [tab, setTab] = useState<"students" | "scores">("students");
-  const [registerCode, setRegisterCode] = useState("");
-  const [codeInput, setCodeInput] = useState("");
-  const [codeMsg, setCodeMsg] = useState("");
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
 
   function toggleStudent(uid: string) {
     setExpandedStudents((prev) => {
@@ -63,44 +61,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function load() {
-      const [stuRes, scoreRes, qRes, settingsRes] = await Promise.all([
+      const [stuRes, scoreRes, qRes] = await Promise.all([
         fetch("/api/admin/students"),
         fetch("/api/admin/scores"),
         fetch("/api/admin/questions"),
-        fetch("/api/admin/settings"),
       ]);
       const stuData = await stuRes.json();
       const scoreData = await scoreRes.json();
       setStudents(Array.isArray(stuData) ? stuData : []);
       const validScores = Array.isArray(scoreData) ? scoreData : [];
       setScores(validScores);
-      // 데이터 로드 시 모든 학생 자동으로 열기
       const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
       setExpandedStudents(uids);
       const qs = await qRes.json();
       setQuestionCount(Array.isArray(qs) ? qs.length : 0);
-      const settings = await settingsRes.json();
-      setRegisterCode(settings.registerCode ?? "");
-      setCodeInput(settings.registerCode ?? "");
     }
     load();
   }, []);
-
-  async function handleCodeSave() {
-    setCodeMsg("");
-    const res = await fetch("/api/admin/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ registerCode: codeInput }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setRegisterCode(codeInput);
-      setCodeMsg("저장되었습니다.");
-    } else {
-      setCodeMsg(data.error || "오류가 발생했습니다.");
-    }
-  }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -120,32 +97,6 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-        {/* 등록 코드 관리 */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">수강생 등록 코드</p>
-              <p className="text-xs text-slate-400 mt-0.5">현재 코드: <span className="font-mono font-bold text-blue-600">{registerCode || "-"}</span></p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="새 등록 코드 입력 (4자 이상)"
-            />
-            <button
-              onClick={handleCodeSave}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium"
-            >
-              저장
-            </button>
-          </div>
-          {codeMsg && <p className={`text-xs mt-2 ${codeMsg.includes("오류") || codeMsg.includes("자") ? "text-red-500" : "text-green-600"}`}>{codeMsg}</p>}
-        </div>
-
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <p className="text-sm text-slate-500">총 수강생</p>
@@ -178,6 +129,15 @@ export default function AdminPage() {
 
         {tab === "students" && (
           <div className="bg-white rounded-xl border border-slate-200">
+            <div className="px-6 py-3 border-b border-slate-100">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="이름 또는 이메일로 검색"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             <table className="w-full">
               <thead>
                 <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
@@ -189,9 +149,15 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {students.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">수강생이 없습니다.</td></tr>
-                ) : students.map((s) => {
+                {students.filter((s) =>
+                  s.name.toLowerCase().includes(search.toLowerCase()) ||
+                  s.email.toLowerCase().includes(search.toLowerCase())
+                ).length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">{search ? "검색 결과가 없습니다." : "수강생이 없습니다."}</td></tr>
+                ) : students.filter((s) =>
+                  s.name.toLowerCase().includes(search.toLowerCase()) ||
+                  s.email.toLowerCase().includes(search.toLowerCase())
+                ).map((s) => {
                   const expired = s.planExpiresAt && new Date(s.planExpiresAt) < new Date();
                   return (
                   <tr
