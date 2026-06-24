@@ -1,0 +1,176 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+interface RegisterCode {
+  id: string;
+  code: string;
+  plan: string;
+  durationDays: number;
+  label: string;
+  createdAt: string;
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  TEST: "모의고사",
+  LECTURE: "강의",
+  VOCAB: "단어장",
+  FULL: "강의 + 모의고사",
+  TEST_VOCAB: "모의고사 + 단어장",
+  ALL: "전체 (강의 + 모의고사 + 단어장)",
+};
+
+export default function AdminCodesPage() {
+  const [codes, setCodes] = useState<RegisterCode[]>([]);
+  const [form, setForm] = useState({ code: "", plan: "FULL", durationDays: 30, label: "" });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function load() {
+    const res = await fetch("/api/admin/codes");
+    const data = await res.json();
+    setCodes(Array.isArray(data) ? data : []);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleCreate(e: { preventDefault(): void }) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage("");
+    const res = await fetch("/api/admin/codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (res.ok) {
+      setMessage("코드가 생성되었습니다.");
+      setForm({ code: "", plan: "FULL", durationDays: 30, label: "" });
+      load();
+    } else {
+      setMessage(data.error || "오류가 발생했습니다.");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("이 코드를 삭제하시겠습니까?")) return;
+    await fetch(`/api/admin/codes/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <h1 className="font-bold text-lg text-slate-800">등록 코드 관리</h1>
+        <Link href="/admin" className="text-sm text-slate-500 hover:underline">← 관리자 홈</Link>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-6 py-8">
+        {/* 코드 생성 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
+          <h2 className="font-semibold text-slate-800 mb-4">새 코드 생성</h2>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">플랜</label>
+                <select
+                  value={form.plan}
+                  onChange={(e) => setForm({ ...form, plan: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="TEST">모의고사</option>
+                  <option value="LECTURE">강의</option>
+                  <option value="VOCAB">단어장</option>
+                  <option value="FULL">강의 + 모의고사</option>
+                  <option value="TEST_VOCAB">모의고사 + 단어장</option>
+                  <option value="ALL">전체 (강의 + 모의고사 + 단어장)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">이용 기간 (일)</label>
+                <input
+                  type="number"
+                  value={form.durationDays}
+                  onChange={(e) => setForm({ ...form, durationDays: Number(e.target.value) })}
+                  min={1}
+                  required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">코드</label>
+              <input
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                required
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="예: yeosin-2025-01"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">메모 (선택)</label>
+              <input
+                value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="예: 홍길동 3개월 결제"
+              />
+            </div>
+            {message && (
+              <p className={`text-sm ${message.includes("오류") || message.includes("존재") ? "text-red-500" : "text-green-600"}`}>
+                {message}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? "생성 중..." : "코드 생성"}
+            </button>
+          </form>
+        </div>
+
+        {/* 코드 목록 */}
+        <div className="bg-white rounded-xl border border-slate-200">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-800">코드 목록</h2>
+            <span className="text-xs text-slate-400">{codes.length}개</span>
+          </div>
+          {codes.length === 0 ? (
+            <div className="px-6 py-12 text-center text-slate-400">등록된 코드가 없습니다.</div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+                  <th className="px-4 py-3">코드</th>
+                  <th className="px-4 py-3">플랜</th>
+                  <th className="px-4 py-3">기간</th>
+                  <th className="px-4 py-3">메모</th>
+                  <th className="px-4 py-3">삭제</th>
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map((c) => (
+                  <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">{c.code}</td>
+                    <td className="px-4 py-3 text-sm">{PLAN_LABEL[c.plan] ?? c.plan}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{c.durationDays}일</td>
+                    <td className="px-4 py-3 text-sm text-slate-400">{c.label || "-"}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => handleDelete(c.id)} className="text-xs text-red-400 hover:text-red-600">삭제</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

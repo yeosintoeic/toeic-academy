@@ -1,0 +1,301 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+const PLAN_LABEL: Record<string, string> = {
+  NONE: "미구독", TEST: "모의고사", LECTURE: "강의", FULL: "강의+시험",
+};
+
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  plan: string;
+  planExpiresAt: string | null;
+  createdAt: string;
+  sessions: { totalScore: number; totalQuestions: number; completedAt: string }[];
+}
+
+interface Score {
+  id: string;
+  mode: string;
+  completedAt: string;
+  totalScore: number;
+  totalQuestions: number;
+  part5Score: number;
+  part6Score: number;
+  part7Score: number;
+  user: { id: string; name: string; email: string };
+}
+
+const MODE_LABEL: Record<string, string> = {
+  full: "실전", part5: "Part 5", part6: "Part 6", part7: "Part 7",
+};
+
+export default function AdminPage() {
+  const router = useRouter();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [scores, setScores] = useState<Score[]>([]);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [tab, setTab] = useState<"students" | "scores">("students");
+  const [registerCode, setRegisterCode] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [codeMsg, setCodeMsg] = useState("");
+  const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
+
+  function toggleStudent(uid: string) {
+    setExpandedStudents((prev) => {
+      const next = new Set(prev);
+      next.has(uid) ? next.delete(uid) : next.add(uid);
+      return next;
+    });
+  }
+
+  // 학생별로 점수 그룹화
+  const scoresByStudent = scores.reduce<Record<string, { user: Score["user"]; sessions: Score[] }>>((acc, s) => {
+    const uid = s.user.id || s.user.email;
+    if (!acc[uid]) acc[uid] = { user: s.user, sessions: [] };
+    acc[uid].sessions.push(s);
+    return acc;
+  }, {});
+
+  useEffect(() => {
+    async function load() {
+      const [stuRes, scoreRes, qRes, settingsRes] = await Promise.all([
+        fetch("/api/admin/students"),
+        fetch("/api/admin/scores"),
+        fetch("/api/admin/questions"),
+        fetch("/api/admin/settings"),
+      ]);
+      const stuData = await stuRes.json();
+      const scoreData = await scoreRes.json();
+      setStudents(Array.isArray(stuData) ? stuData : []);
+      const validScores = Array.isArray(scoreData) ? scoreData : [];
+      setScores(validScores);
+      // 데이터 로드 시 모든 학생 자동으로 열기
+      const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
+      setExpandedStudents(uids);
+      const qs = await qRes.json();
+      setQuestionCount(Array.isArray(qs) ? qs.length : 0);
+      const settings = await settingsRes.json();
+      setRegisterCode(settings.registerCode ?? "");
+      setCodeInput(settings.registerCode ?? "");
+    }
+    load();
+  }, []);
+
+  async function handleCodeSave() {
+    setCodeMsg("");
+    const res = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registerCode: codeInput }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setRegisterCode(codeInput);
+      setCodeMsg("저장되었습니다.");
+    } else {
+      setCodeMsg(data.error || "오류가 발생했습니다.");
+    }
+  }
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <h1 className="font-bold text-lg text-slate-800">관리자 페이지</h1>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/codes" className="text-sm text-blue-600 hover:underline">코드 관리</Link>
+          <Link href="/admin/lectures" className="text-sm text-blue-600 hover:underline">강의 관리</Link>
+          <Link href="/admin/questions" className="text-sm text-blue-600 hover:underline">문제 관리</Link>
+          <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        {/* 등록 코드 관리 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">수강생 등록 코드</p>
+              <p className="text-xs text-slate-400 mt-0.5">현재 코드: <span className="font-mono font-bold text-blue-600">{registerCode || "-"}</span></p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value)}
+              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="새 등록 코드 입력 (4자 이상)"
+            />
+            <button
+              onClick={handleCodeSave}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium"
+            >
+              저장
+            </button>
+          </div>
+          {codeMsg && <p className={`text-xs mt-2 ${codeMsg.includes("오류") || codeMsg.includes("자") ? "text-red-500" : "text-green-600"}`}>{codeMsg}</p>}
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-sm text-slate-500">총 수강생</p>
+            <p className="text-3xl font-bold text-slate-800 mt-1">{students.length}명</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-sm text-slate-500">총 응시 횟수</p>
+            <p className="text-3xl font-bold text-slate-800 mt-1">{scores.length}회</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <p className="text-sm text-slate-500">등록 문제 수</p>
+            <p className="text-3xl font-bold text-slate-800 mt-1">{questionCount}문제</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setTab("students")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === "students" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+          >
+            수강생 목록
+          </button>
+          <button
+            onClick={() => setTab("scores")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === "scores" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+          >
+            성적 현황
+          </button>
+        </div>
+
+        {tab === "students" && (
+          <div className="bg-white rounded-xl border border-slate-200">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+                  <th className="px-6 py-3">이름</th>
+                  <th className="px-6 py-3">이메일</th>
+                  <th className="px-6 py-3">플랜</th>
+                  <th className="px-6 py-3">만료일</th>
+                  <th className="px-6 py-3">최근 점수</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">수강생이 없습니다.</td></tr>
+                ) : students.map((s) => {
+                  const expired = s.planExpiresAt && new Date(s.planExpiresAt) < new Date();
+                  return (
+                  <tr
+                    key={s.id}
+                    onClick={() => router.push(`/admin/students/${s.id}`)}
+                    className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer"
+                  >
+                    <td className="px-6 py-4 text-sm font-medium">{s.name}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{s.email}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        s.plan === "NONE" ? "bg-slate-100 text-slate-500" :
+                        expired ? "bg-red-100 text-red-500" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>
+                        {PLAN_LABEL[s.plan] ?? s.plan}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {s.planExpiresAt
+                        ? <span className={expired ? "text-red-400" : ""}>{new Date(s.planExpiresAt).toLocaleDateString("ko-KR")}</span>
+                        : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-blue-600">
+                      {s.sessions[0] ? `${s.sessions[0].totalScore}점` : "-"}
+                    </td>
+                  </tr>
+                )})}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === "scores" && (
+          <div className="space-y-3">
+            {Object.keys(scoresByStudent).length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 px-6 py-12 text-center text-slate-400">응시 기록이 없습니다.</div>
+            ) : Object.entries(scoresByStudent).map(([uid, { user, sessions }]) => {
+              const isOpen = expandedStudents.has(uid);
+              const avg = Math.round(sessions.reduce((a, s) => a + (s.totalQuestions > 0 ? s.totalScore / s.totalQuestions * 100 : 0), 0) / sessions.length);
+              const best = Math.max(...sessions.map((s) => s.totalQuestions > 0 ? Math.round(s.totalScore / s.totalQuestions * 100) : 0));
+              return (
+                <div key={uid} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleStudent(uid)}
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{user.name}</p>
+                        <p className="text-xs text-slate-400">{user.email}</p>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{sessions.length}회 응시</span>
+                        <span>평균 <span className="font-semibold text-slate-700">{avg}%</span></span>
+                        <span>최고 <span className="font-semibold text-blue-600">{best}%</span></span>
+                      </div>
+                    </div>
+                    <span className="text-slate-400 text-lg">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-slate-100">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left text-xs text-slate-400 bg-slate-50">
+                            <th className="px-6 py-2">응시일</th>
+                            <th className="px-6 py-2">유형</th>
+                            <th className="px-6 py-2">Part 5</th>
+                            <th className="px-6 py-2">Part 6</th>
+                            <th className="px-6 py-2">Part 7</th>
+                            <th className="px-6 py-2">총점</th>
+                            <th className="px-6 py-2">정답률</th>
+                            <th className="px-6 py-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sessions.map((s) => (
+                            <tr key={s.id} onClick={() => router.push(`/results?sessionId=${s.id}`)} className="border-t border-slate-50 hover:bg-blue-50 cursor-pointer">
+                              <td className="px-6 py-3 text-xs text-slate-500">{new Date(s.completedAt).toLocaleDateString("ko-KR")}</td>
+                              <td className="px-6 py-3">
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${s.mode === "full" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
+                                  {MODE_LABEL[s.mode] ?? s.mode}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 text-xs">{s.mode === "full" || s.mode === "part5" ? `${s.part5Score}/30` : "-"}</td>
+                              <td className="px-6 py-3 text-xs">{s.mode === "full" || s.mode === "part6" ? `${s.part6Score}/16` : "-"}</td>
+                              <td className="px-6 py-3 text-xs">{s.mode === "full" || s.mode === "part7" ? `${s.part7Score}/54` : "-"}</td>
+                              <td className="px-6 py-3 text-xs font-bold text-blue-600">{s.totalScore}/{s.totalQuestions}</td>
+                              <td className="px-6 py-3 text-xs text-slate-500">{s.totalQuestions > 0 ? Math.round((s.totalScore / s.totalQuestions) * 100) + "%" : "-"}</td>
+                              <td className="px-6 py-3 text-xs text-blue-500 font-medium">오답 보기 →</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

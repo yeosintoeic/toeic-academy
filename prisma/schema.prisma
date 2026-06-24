@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          String    @default("STUDENT")
+  plan          String    @default("NONE")  // NONE | TEST | LECTURE | FULL
+  planExpiresAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  sessions TestSession[]
+}
+
+model QuestionGroup {
+  id          String @id @default(cuid())
+  part        Int
+  passageText String
+  passageType String @default("")
+
+  questions Question[]
+}
+
+model Question {
+  id           String @id @default(cuid())
+  part         Int
+  questionText String
+  optionA      String
+  optionB      String
+  optionC      String
+  optionD      String
+  answer       String
+  explanation  String @default("")
+  category     String @default("")
+
+  groupId String?
+  group   QuestionGroup? @relation(fields: [groupId], references: [id])
+
+  answers TestAnswer[]
+}
+
+model TestSession {
+  id             String    @id @default(cuid())
+  userId         String
+  mode           String    @default("full") // full | part5 | part6 | part7
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  part5Score     Int       @default(0)
+  part6Score     Int       @default(0)
+  part7Score     Int       @default(0)
+  totalScore     Int       @default(0)
+  totalQuestions Int       @default(0)
+
+  user    User         @relation(fields: [userId], references: [id])
+  answers TestAnswer[]
+}
+
+model TestAnswer {
+  id         String  @id @default(cuid())
+  sessionId  String
+  questionId String
+  selected   String
+  isCorrect  Boolean
+
+  session  TestSession @relation(fields: [sessionId], references: [id])
+  question Question    @relation(fields: [questionId], references: [id])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model RegisterCode {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  plan         String   // TEST | LECTURE | FULL
+  durationDays Int
+  label        String   @default("")
+  createdAt    DateTime @default(now())
+}
+
+model Lecture {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  videoUrl    String   @default("")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
