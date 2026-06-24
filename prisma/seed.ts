@@ -3,8 +3,8 @@ import { PrismaBetterSQLite3 } from "@prisma/adapter-better-sqlite3";
 import bcrypt from "bcryptjs";
 import path from "path";
 
-const dbPath = path.join(process.cwd(), "dev.db");
-const adapter = new PrismaBetterSQLite3({ url: `file:${dbPath}` });
+const dbUrl = process.env.DATABASE_URL ?? `file:${path.join(process.cwd(), "dev.db")}`;
+const adapter = new PrismaBetterSQLite3({ url: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
