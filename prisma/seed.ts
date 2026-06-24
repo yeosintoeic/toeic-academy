@@ -16,12 +16,19 @@ async function main() {
     create: { email: "yeosintoeic@yeosintoeic.com", password: adminPassword, name: "관리자", role: "ADMIN" },
   });
 
-  // 샘플 수강생
-  const studentPassword = await bcrypt.hash("student1234", 10);
+  // 테스트 계정 (무제한 ALL 플랜)
+  const testPassword = await bcrypt.hash("dlsdn0420", 10);
   await prisma.user.upsert({
-    where: { email: "student@toeic.com" },
+    where: { email: "dlsdn0420@naver.com" },
     update: {},
-    create: { email: "student@toeic.com", password: studentPassword, name: "홍길동", role: "STUDENT" },
+    create: {
+      email: "dlsdn0420@naver.com",
+      password: testPassword,
+      name: "테스트",
+      role: "STUDENT",
+      plan: "ALL",
+      planExpiresAt: new Date("9999-12-31"),
+    },
   });
 
   // Part 5 샘플 문제 (10개)
