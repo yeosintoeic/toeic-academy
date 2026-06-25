@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { signToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json();
+  const { email, password, rememberMe } = await req.json();
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7,
     path: "/",
   });
 
