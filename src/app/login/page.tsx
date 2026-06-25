@@ -49,6 +49,11 @@ export default function LoginPage() {
       return;
     }
 
+    if (data.mustChangePw) {
+      router.push("/change-password");
+      return;
+    }
+
     router.push(data.role === "ADMIN" ? "/admin" : "/dashboard");
   }
 
@@ -161,7 +166,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 whitespace-pre-line">
                 {error}
               </div>
             )}
@@ -175,7 +180,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="relative my-8">
+          <p className="text-xs text-center text-slate-400 mt-3">
+            비밀번호를 잊으셨나요?{" "}
+            <span className="text-blue-500">관리자에게 문의하세요</span>
+          </p>
+
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-100" />
             </div>

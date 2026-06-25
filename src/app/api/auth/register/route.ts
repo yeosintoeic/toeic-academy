@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { email, password, name, code } = body;
+  const { email, password, name, code, phone, privacyConsent, marketingConsent } = body;
 
   if (!email || !password || !name || !code) {
     return Response.json({ error: "모든 항목을 입력해주세요." }, { status: 400 });
@@ -40,9 +40,12 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase().trim(),
         password: hashed,
         name: name.trim(),
+        phone: phone?.trim() || null,
         role: "STUDENT",
         plan: regCode.plan,
         planExpiresAt,
+        privacyConsent: !!privacyConsent,
+        marketingConsent: !!marketingConsent,
       },
     }),
     prisma.registerCode.delete({ where: { code } }),

@@ -13,9 +13,14 @@ model User {
   password      String
   name          String
   role          String    @default("STUDENT")
-  plan          String    @default("NONE")  // NONE | TEST | LECTURE | FULL
+  plan          String    @default("NONE")
   planExpiresAt DateTime?
-  createdAt     DateTime  @default(now())
+  loginAttempts    Int       @default(0)
+  mustChangePw     Boolean   @default(false)
+  phone            String?
+  privacyConsent   Boolean   @default(false)
+  marketingConsent Boolean   @default(false)
+  createdAt        DateTime  @default(now())
 
   sessions TestSession[]
 }

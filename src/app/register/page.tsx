@@ -7,6 +7,7 @@ import Link from "next/link";
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -30,7 +31,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, code }),
+      body: JSON.stringify({ name, phone, email, password, code, privacyConsent: privacyAgreed, marketingConsent: marketingAgreed }),
     });
 
     const data = await res.json();
@@ -77,6 +78,16 @@ export default function RegisterPage() {
                 required
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50 focus:bg-white"
                 placeholder="홍길동"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">전화번호</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50 focus:bg-white"
+                placeholder="010-0000-0000"
               />
             </div>
             <div>

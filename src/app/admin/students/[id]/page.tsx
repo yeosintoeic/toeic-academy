@@ -19,8 +19,11 @@ interface Student {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   plan: string;
   planExpiresAt: string | null;
+  privacyConsent: boolean;
+  marketingConsent: boolean;
   createdAt: string;
   sessions: TestSession[];
 }
@@ -45,6 +48,9 @@ export default function StudentDetailPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/students/${id}`)
@@ -66,6 +72,28 @@ export default function StudentDetailPage() {
     } else {
       setDeleting(false);
       setMsg("삭제 중 오류가 발생했습니다.");
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!newPassword || newPassword.length < 8) {
+      setPwMsg("비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
+    setPwSaving(true);
+    setPwMsg("");
+    const res = await fetch(`/api/admin/students/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword }),
+    });
+    setPwSaving(false);
+    if (res.ok) {
+      setPwMsg("비밀번호가 변경되었습니다.");
+      setNewPassword("");
+    } else {
+      const data = await res.json();
+      setPwMsg(data.error || "오류가 발생했습니다.");
     }
   }
 
@@ -113,7 +141,16 @@ export default function StudentDetailPage() {
             <div>
               <h2 className="text-lg font-bold text-slate-800">{student.name}</h2>
               <p className="text-sm text-slate-500">{student.email}</p>
+              {student.phone && <p className="text-sm text-slate-500 mt-0.5">📞 {student.phone}</p>}
               <p className="text-xs text-slate-400 mt-1">가입일: {new Date(student.createdAt).toLocaleDateString("ko-KR")}</p>
+              <div className="flex gap-2 mt-1">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${student.privacyConsent ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"}`}>
+                  개인정보 {student.privacyConsent ? "동의" : "미동의"}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${student.marketingConsent ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400"}`}>
+                  마케팅 {student.marketingConsent ? "동의" : "미동의"}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -170,6 +207,31 @@ export default function StudentDetailPage() {
               </button>
             </div>
             {msg && <p className={`text-xs mt-2 ${msg.includes("오류") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
+          </div>
+
+          {/* 비밀번호 변경 */}
+          <div className="border-t border-slate-100 pt-5">
+            <p className="text-sm font-semibold text-slate-700 mb-3">비밀번호 변경</p>
+            <div className="flex gap-3 flex-wrap items-end">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">새 비밀번호 (8자 이상)</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="새 비밀번호 입력"
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-64"
+                />
+              </div>
+              <button
+                onClick={handleChangePassword}
+                disabled={pwSaving}
+                className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-800 disabled:opacity-50"
+              >
+                {pwSaving ? "변경 중..." : "변경"}
+              </button>
+            </div>
+            {pwMsg && <p className={`text-xs mt-2 ${pwMsg.includes("오류") || pwMsg.includes("자") ? "text-red-500" : "text-green-600"}`}>{pwMsg}</p>}
           </div>
         </div>
 

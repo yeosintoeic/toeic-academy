@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function GET(
   _req: NextRequest,
@@ -19,8 +20,11 @@ export async function GET(
       id: true,
       name: true,
       email: true,
+      phone: true,
       plan: true,
       planExpiresAt: true,
+      privacyConsent: true,
+      marketingConsent: true,
       createdAt: true,
       sessions: {
         where: { completedAt: { not: null } },
@@ -52,7 +56,17 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const { plan, planExpiresAt } = await req.json();
+  const { plan, planExpiresAt, newPassword } = await req.json();
+
+  // 비밀번호 변경
+  if (newPassword) {
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return Response.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id }, data: { password: hashed } });
+    return Response.json({ success: true, changed: "password" });
+  }
 
   const VALID_PLANS = ["NONE", "TEST", "LECTURE", "VOCAB", "FULL", "TEST_VOCAB", "ALL"];
   if (plan && !VALID_PLANS.includes(plan)) {
