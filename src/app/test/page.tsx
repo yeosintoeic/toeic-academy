@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import CaptureProtect from "@/components/CaptureProtect";
+import CaptureProtect, { ContentWatermark } from "@/components/CaptureProtect";
 
 interface Question {
   id: string;
@@ -214,6 +214,13 @@ function TestQuiz({ mode }: { mode: Mode }) {
   const [timeLeft, setTimeLeft] = useState(MODE_TIMER[mode]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const MAX_SAVES = 3;
+  const [watermarkLabel, setWatermarkLabel] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.json()).then(d => {
+      if (d.user?.name) setWatermarkLabel(`${d.user.name} ${d.user.email}`);
+    }).catch(() => {});
+  }, []);
 
   const submitRef = useRef<() => void>(() => {});
 
@@ -333,7 +340,8 @@ function TestQuiz({ mode }: { mode: Mode }) {
           </div>
         )}
 
-        <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 relative">
+          {watermarkLabel && <ContentWatermark label={watermarkLabel} />}
           <div className="flex items-start justify-between mb-4">
             <p className="text-slate-800 font-medium leading-relaxed flex-1 pr-3">{q.questionText}</p>
             <button
