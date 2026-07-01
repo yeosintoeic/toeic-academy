@@ -214,15 +214,18 @@ function TestQuiz({ mode }: { mode: Mode }) {
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(MODE_TIMER[mode]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [todaySaveCount, setTodaySaveCount] = useState(0);
   const [kickedDetected, setKickedDetected] = useState(false);
-  const MAX_SAVES = 3;
+  const MAX_DAILY = 3;
 
   useEffect(() => {
     function checkSession() {
       fetch("/api/auth/me").then(r => r.json()).then(d => {
         if (d.kicked) {
           setKickedDetected(true);
-          setTimeout(() => router.push("/login?kicked=1"), 2500);
+          fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+            setTimeout(() => router.push("/login?kicked=1"), 2500);
+          });
           return;
         }
         if (!d.user) { router.push("/login"); return; }
@@ -241,19 +244,20 @@ function TestQuiz({ mode }: { mode: Mode }) {
     };
   }, [router]);
 
-  // DB에서 저장된 문제 목록 불러오기
+  // DB에서 저장된 문제 목록 + 오늘 저장 횟수 불러오기
   useEffect(() => {
     fetch("/api/saved-questions")
       .then(r => r.json())
       .then(d => {
         if (d.saved) setSavedIds(d.saved.map((s: { questionId: string }) => s.questionId));
+        if (typeof d.todayCount === "number") setTodaySaveCount(d.todayCount);
       })
       .catch(() => {});
   }, []);
 
-  function toggleSave(questionId: string, questionText: string) {
+  async function toggleSave(questionId: string, questionText: string) {
     const isSaved = savedIds.includes(questionId);
-    if (!isSaved && savedIds.length >= MAX_SAVES) return;
+    if (!isSaved && todaySaveCount >= MAX_DAILY) return;
 
     if (isSaved) {
       setSavedIds(prev => prev.filter(id => id !== questionId));
@@ -263,12 +267,16 @@ function TestQuiz({ mode }: { mode: Mode }) {
         body: JSON.stringify({ questionId }),
       }).catch(() => {});
     } else {
-      setSavedIds(prev => [...prev, questionId]);
-      fetch("/api/saved-questions", {
+      const res = await fetch("/api/saved-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId, questionText, sessionId }),
-      }).catch(() => {});
+      });
+      if (res.ok) {
+        setSavedIds(prev => [...prev, questionId]);
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.todayCount === "number") setTodaySaveCount(data.todayCount);
+      }
     }
   }
 
@@ -417,17 +425,17 @@ function TestQuiz({ mode }: { mode: Mode }) {
             <p className="text-slate-800 font-medium leading-relaxed flex-1 pr-3">{q.questionText}</p>
             <button
               onClick={() => toggleSave(q.id, q.questionText)}
-              title={savedIds.includes(q.id) ? "저장 취소" : savedIds.length >= MAX_SAVES ? `최대 ${MAX_SAVES}개까지 저장 가능` : "문제 저장"}
+              title={savedIds.includes(q.id) ? "저장 취소" : todaySaveCount >= MAX_DAILY ? `오늘 저장 한도(${MAX_DAILY}회)를 초과했습니다` : "문제 저장"}
               className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border text-xs transition-colors ${
                 savedIds.includes(q.id)
                   ? "bg-yellow-50 border-yellow-400 text-yellow-700"
-                  : savedIds.length >= MAX_SAVES
+                  : todaySaveCount >= MAX_DAILY
                   ? "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed"
                   : "bg-slate-50 border-slate-200 text-slate-500 hover:border-yellow-400 hover:text-yellow-600"
               }`}
             >
               <span className="text-base">{savedIds.includes(q.id) ? "★" : "☆"}</span>
-              <span className="font-medium">{savedIds.length}/{MAX_SAVES}</span>
+              <span className="font-medium">{todaySaveCount}/{MAX_DAILY}</span>
             </button>
           </div>
           <div className="space-y-3">
@@ -499,7 +507,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
 
         {savedIds.length > 0 && (
           <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-yellow-700 mb-2">★ 저장된 문제 ({savedIds.length}/{MAX_SAVES})</p>
+            <p className="text-xs font-semibold text-yellow-700 mb-2">★ 저장된 문제 ({todaySaveCount}/{MAX_DAILY})</p>
             <div className="flex flex-wrap gap-2">
               {savedIds.map((id) => {
                 const idx = questions.findIndex((q2) => q2.id === id);
@@ -537,13 +545,23 @@ function TestContent() {
   return <ModeSelect onHistory={() => setShowHistory(true)} />;
 }
 
-export default function TestPage() {
+function TestPageInner() {
+  const [userEmail, setUserEmail] = useState("");
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.json()).then(d => {
+      if (d.user?.email) setUserEmail(d.user.email);
+    }).catch(() => {});
+  }, []);
   return (
     <>
-      <CaptureProtect page="test" />
+      <CaptureProtect page="test" userEmail={userEmail} />
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
         <TestContent />
       </Suspense>
     </>
   );
+}
+
+export default function TestPage() {
+  return <TestPageInner />;
 }

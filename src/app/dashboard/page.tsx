@@ -110,7 +110,9 @@ function DashboardContent() {
         if (!res.ok || !data.user) {
           if (data?.kicked) {
             setKickedDetected(true);
-            setTimeout(() => router.push("/login?kicked=1"), 2500);
+            fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+              setTimeout(() => router.push("/login?kicked=1"), 2500);
+            });
           } else {
             router.push("/login");
           }

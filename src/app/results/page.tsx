@@ -97,7 +97,10 @@ function ResultContent() {
   const { mode, part5Score, part6Score, part7Score, totalScore, totalQuestions, answers } = result;
   const pct = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
   const rcScore = toRCScore(totalScore, totalQuestions);
-  const isFull = mode === "full";
+  const isPartOnly = mode === "part5" || mode === "part6" || mode === "part7";
+  const partLabel: Record<string, string> = { part5: "Part 5", part6: "Part 6", part7: "Part 7" };
+  const partTotal: Record<string, number> = { part5: 30, part6: 16, part7: 54 };
+  const partScore: Record<string, number> = { part5: part5Score, part6: part6Score, part7: part7Score };
 
   const seenGroupIds = new Set<string>();
   const filteredAnswers = answers.filter((a) => {
@@ -120,42 +123,65 @@ function ResultContent() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center mb-8 print:hidden">
           <p className="text-slate-500 text-sm mb-2">수고하셨습니다!</p>
 
-          {/* 토익 RC 환산 점수 */}
-          <div className="mb-1">
-            <span className="text-6xl font-bold text-blue-600">{rcScore}</span>
-            <span className="text-2xl font-semibold text-blue-400"> / 495</span>
-          </div>
-          <p className="text-xs text-slate-400 mb-1">
-            RC 환산 점수{!isFull && " (100문제 기준 예상)"}
-          </p>
-          <p className="text-slate-400 text-sm mb-6">
-            정답 {totalScore} / {totalQuestions}문제 ({pct}%)
-          </p>
-
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-xs text-slate-500 mb-1">Part 5</p>
-              <p className="text-xl font-bold text-slate-800">{part5Score}<span className="text-sm font-normal text-slate-400"> / 30</span></p>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-xs text-slate-500 mb-1">Part 6</p>
-              <p className="text-xl font-bold text-slate-800">{part6Score}<span className="text-sm font-normal text-slate-400"> / 16</span></p>
-            </div>
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-xs text-slate-500 mb-1">Part 7</p>
-              <p className="text-xl font-bold text-slate-800">{part7Score}<span className="text-sm font-normal text-slate-400"> / 54</span></p>
-            </div>
-          </div>
-
-          <div className={`rounded-xl p-4 mb-6 text-sm ${
-            rcScore >= 400 ? "bg-green-50 text-green-700" :
-            rcScore >= 280 ? "bg-yellow-50 text-yellow-700" :
-            "bg-red-50 text-red-700"
-          }`}>
-            {rcScore >= 400 ? "훌륭합니다! 목표 점수에 가까워지고 있어요." :
-             rcScore >= 280 ? "좋은 성과입니다. 조금만 더 노력하면 됩니다!" :
-             "더 많은 연습이 필요합니다. 포기하지 마세요!"}
-          </div>
+          {isPartOnly ? (
+            /* 파트별 집중연습 점수 */
+            <>
+              <p className="text-xs text-slate-400 mb-1">{partLabel[mode]} 점수</p>
+              <div className="mb-1">
+                <span className="text-6xl font-bold text-blue-600">{partScore[mode]}</span>
+                <span className="text-2xl font-semibold text-blue-400"> / {partTotal[mode]}점</span>
+              </div>
+              <p className="text-slate-400 text-sm mb-6">
+                정답률 {pct}%
+              </p>
+              <div className="bg-slate-50 rounded-xl p-5 mb-6">
+                <div className="w-full bg-slate-200 rounded-full h-3 mb-2">
+                  <div
+                    className={`h-3 rounded-full ${pct >= 80 ? "bg-green-500" : pct >= 60 ? "bg-yellow-400" : "bg-red-400"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <p className={`text-sm font-semibold ${pct >= 80 ? "text-green-600" : pct >= 60 ? "text-yellow-600" : "text-red-500"}`}>
+                  {pct >= 80 ? "훌륭합니다!" : pct >= 60 ? "좋은 성과입니다!" : "더 연습해보세요!"}
+                </p>
+              </div>
+            </>
+          ) : (
+            /* 실전 모의고사 - RC 환산 점수 */
+            <>
+              <div className="mb-1">
+                <span className="text-6xl font-bold text-blue-600">{rcScore}</span>
+                <span className="text-2xl font-semibold text-blue-400"> / 495</span>
+              </div>
+              <p className="text-xs text-slate-400 mb-1">RC 환산 점수</p>
+              <p className="text-slate-400 text-sm mb-6">
+                정답 {totalScore} / {totalQuestions}문제 ({pct}%)
+              </p>
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-1">Part 5</p>
+                  <p className="text-xl font-bold text-slate-800">{part5Score}<span className="text-sm font-normal text-slate-400"> / 30</span></p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-1">Part 6</p>
+                  <p className="text-xl font-bold text-slate-800">{part6Score}<span className="text-sm font-normal text-slate-400"> / 16</span></p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs text-slate-500 mb-1">Part 7</p>
+                  <p className="text-xl font-bold text-slate-800">{part7Score}<span className="text-sm font-normal text-slate-400"> / 54</span></p>
+                </div>
+              </div>
+              <div className={`rounded-xl p-4 mb-6 text-sm ${
+                rcScore >= 400 ? "bg-green-50 text-green-700" :
+                rcScore >= 280 ? "bg-yellow-50 text-yellow-700" :
+                "bg-red-50 text-red-700"
+              }`}>
+                {rcScore >= 400 ? "훌륭합니다! 목표 점수에 가까워지고 있어요." :
+                 rcScore >= 280 ? "좋은 성과입니다. 조금만 더 노력하면 됩니다!" :
+                 "더 많은 연습이 필요합니다. 포기하지 마세요!"}
+              </div>
+            </>
+          )}
 
           <div className="flex gap-3">
             <button

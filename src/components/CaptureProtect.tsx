@@ -10,52 +10,83 @@ function logCapture(type: string, page: string) {
   }).catch(() => {});
 }
 
-export default function CaptureProtect({ page = "unknown" }: { page?: string }) {
+export default function CaptureProtect({ page = "unknown", userEmail = "" }: { page?: string; userEmail?: string }) {
   const patchedRef = useRef(false);
+  const screenshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [warning, setWarning] = useState(false);
+
+  const trigger = (type: string) => {
+    logCapture(type, page);
+    setWarning(true);
+  };
 
   useEffect(() => {
     const blockMenu = (e: MouseEvent) => e.preventDefault();
 
     const blockKey = (e: KeyboardEvent) => {
       const key = e.key;
+      const code = e.code ?? "";
       const meta = e.metaKey;
       const ctrl = e.ctrlKey;
 
       let blocked = false;
+      // PrintScreen (Windows/Linux)
       if (key === "PrintScreen") blocked = true;
-      if (meta && ["3", "4", "5"].includes(key) && e.shiftKey) blocked = true;
-      if (meta && ["s", "S"].includes(key) && e.shiftKey) blocked = true;
-      if (ctrl && ["p", "P", "s", "S"].includes(key)) blocked = true;
+      // macOS 스크린샷: Cmd+Shift+3/4/5
+      // e.key는 Shift+숫자키로 인해 '#','$','%'가 되므로 반드시 e.code 사용
+      if (meta && e.shiftKey && ["Digit3", "Digit4", "Digit5"].includes(code)) blocked = true;
+      // macOS 저장: Cmd+Shift+S
+      if (meta && e.shiftKey && (key === "s" || key === "S")) blocked = true;
+      // 인쇄: Ctrl+P
+      if (ctrl && (key === "p" || key === "P")) blocked = true;
+      // 저장: Ctrl+S
+      if (ctrl && (key === "s" || key === "S")) blocked = true;
+      // 개발자 도구
       if (ctrl && e.shiftKey && ["i", "I", "j", "J", "c", "C"].includes(key)) blocked = true;
       if (key === "F12") blocked = true;
 
       if (blocked) {
         e.preventDefault();
         e.stopPropagation();
-        logCapture("keyboard:" + key, page);
-        setWarning(true);
+        trigger("keyboard:" + (code || key));
       }
     };
 
+    // 인쇄 감지 (가장 신뢰도 높음)
+    const onBeforePrint = () => trigger("print");
+
+    // matchMedia 폴백
     const mql = window.matchMedia("print");
-    const onPrint = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        logCapture("print", page);
-        setWarning(true);
-      }
-    };
+    const onPrintMQ = (e: MediaQueryListEvent) => { if (e.matches) trigger("print-mq"); };
 
+    // 화면 공유 감지 (getDisplayMedia 패치)
     if (!patchedRef.current && navigator.mediaDevices?.getDisplayMedia) {
       patchedRef.current = true;
       const orig = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
       navigator.mediaDevices.getDisplayMedia = function (...args) {
-        logCapture("screen-share", page);
-        setWarning(true);
+        trigger("screen-share");
         return orig(...args);
       };
     }
 
+    // macOS 스크린샷 도구 감지:
+    // Cmd+Shift+4 선택 모드 시 마우스 커서가 크로스헤어로 바뀌며 brief blur 발생 가능
+    // blur → 짧은 시간(300ms) 내 focus 복귀 없으면 스크린샷 도구일 가능성
+    const onBlur = () => {
+      screenshotTimerRef.current = setTimeout(() => {
+        // 300ms 안에 focus 안 돌아오면 외부 앱으로 전환 → 무시
+      }, 300);
+    };
+    const onFocus = () => {
+      if (screenshotTimerRef.current) {
+        clearTimeout(screenshotTimerRef.current);
+        screenshotTimerRef.current = null;
+        // blur→focus 300ms 이내: 스크린샷 도구였을 가능성
+        trigger("possible-screenshot");
+      }
+    };
+
+    // CSS: 선택 방지 + 인쇄 시 내용 숨김
     const style = document.createElement("style");
     style.id = "__capture_protect_style";
     style.textContent = `
@@ -67,22 +98,66 @@ export default function CaptureProtect({ page = "unknown" }: { page?: string }) 
 
     document.addEventListener("contextmenu", blockMenu);
     document.addEventListener("keydown", blockKey, true);
-    mql.addEventListener("change", onPrint);
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    mql.addEventListener("change", onPrintMQ);
 
     return () => {
       document.removeEventListener("contextmenu", blockMenu);
       document.removeEventListener("keydown", blockKey, true);
-      mql.removeEventListener("change", onPrint);
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      mql.removeEventListener("change", onPrintMQ);
       document.getElementById("__capture_protect_style")?.remove();
+      if (screenshotTimerRef.current) clearTimeout(screenshotTimerRef.current);
     };
-  }, [page]);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!warning) return null;
+  // 워터마크: 캡처 시 사용자 이메일이 찍혀서 추적 가능
+  const watermarkText = userEmail || "여신토익 © 무단배포금지";
+
+  if (!warning) {
+    return (
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 9990,
+          overflow: "hidden",
+        }}
+      >
+        {Array.from({ length: 8 }).map((_, row) =>
+          Array.from({ length: 4 }).map((_, col) => (
+            <span
+              key={`${row}-${col}`}
+              style={{
+                position: "absolute",
+                top: `${row * 13 + 5}%`,
+                left: `${col * 26 + 3}%`,
+                fontSize: "11px",
+                color: "rgba(0,0,0,0.045)",
+                transform: "rotate(-30deg)",
+                whiteSpace: "nowrap",
+                userSelect: "none",
+                fontFamily: "monospace",
+              }}
+            >
+              {watermarkText}
+            </span>
+          ))
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
       className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center text-white text-center p-8"
-      onClick={() => setWarning(false)}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="text-6xl mb-6">⚠️</div>
       <h1 className="text-3xl font-black mb-4 text-red-400">무단 배포 금지</h1>

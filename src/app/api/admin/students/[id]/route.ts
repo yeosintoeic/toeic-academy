@@ -31,6 +31,7 @@ export async function GET(
         orderBy: { completedAt: "desc" },
         select: {
           id: true,
+          mode: true,
           completedAt: true,
           part5Score: true,
           part6Score: true,

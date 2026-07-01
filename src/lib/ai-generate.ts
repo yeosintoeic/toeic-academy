@@ -24,17 +24,42 @@ interface RawQuestion {
   explanation: string;
 }
 
+function isValidQuestion(q: RawQuestion): boolean {
+  // 정답이 반드시 A/B/C/D 중 정확히 1개여야 함
+  const ans = (q.answer ?? "").trim().toUpperCase();
+  if (!["A", "B", "C", "D"].includes(ans)) return false;
+  // 4개 보기 모두 서로 달라야 함
+  const opts = [q.optionA, q.optionB, q.optionC, q.optionD]
+    .map(o => (o ?? "").trim().toLowerCase())
+    .filter(o => o.length > 0);
+  return opts.length === 4 && new Set(opts).size === 4;
+}
+
 // Part 5: 30 standalone grammar/vocab questions
 export async function generatePart5(): Promise<string[]> {
-  const text = await callGemini(`You are a TOEIC expert. Generate exactly 30 TOEIC Part 5 questions.
-Return ONLY a valid JSON array, no other text.
+  const samples = await prisma.question.findMany({ where: { part: 5 }, take: 12 });
+  const examples = samples.slice(0, 6).map(q =>
+    `문제: ${q.questionText}\n(A)${q.optionA}  (B)${q.optionB}  (C)${q.optionC}  (D)${q.optionD}\n정답: ${q.answer}\n해설: ${q.explanation}`
+  ).join("\n\n");
 
-Format:
-[{"questionText":"The manager ------- the report before the meeting.","optionA":"reviewed","optionB":"reviewing","optionC":"review","optionD":"to review","answer":"A","explanation":"과거시제 문장에서 주어+동사 구조이므로 과거형 reviewed가 정답입니다."}]
+  const text = await callGemini(`당신은 TOEIC 전문 출제 위원입니다. 아래 참고 문제들의 스타일, 난이도, 문법 포인트를 분석하여 동일한 수준의 새로운 문제 30개를 만드세요.
 
-Mix these grammar topics evenly: prepositions, modal verbs, verb tenses, parts of speech (noun/verb/adj/adv), relative clauses, conjunctions, infinitives, gerunds, passive voice
-Business English context, TOEIC 600-900 difficulty
-Korean explanations`);
+[참고 문제 - 이 스타일/난이도를 기반으로 생성]:
+${examples || "(참고 데이터 없음 - TOEIC 표준 형식 사용)"}
+
+위 문제들을 분석하여 같은 패턴, 같은 난이도로 새 문제 30개 생성.
+JSON 배열만 반환 (다른 텍스트 없이).
+
+절대 규칙:
+1. 4개 보기(optionA~D)는 반드시 모두 서로 다른 단어/표현 (중복 절대 금지)
+2. 정답은 반드시 1개만 (answer 필드에 A/B/C/D 중 하나)
+3. 해설은 한국어
+
+형식:
+[{"questionText":"The manager ------- the report before the meeting.","optionA":"reviewed","optionB":"reviewing","optionC":"review","optionD":"to review","answer":"A","explanation":"과거시제이므로 reviewed가 정답"}]
+
+문법 주제 고르게 분배: 전치사, 조동사, 시제, 품사, 관계절, 접속사, 부정사, 동명사, 수동태
+비즈니스 영어, TOEIC 600-900 난이도`);
 
   let questions: RawQuestion[];
   try {
@@ -44,8 +69,13 @@ Korean explanations`);
     throw new Error("Part 5 생성 실패");
   }
 
+  const valid = questions.filter(isValidQuestion);
+  if (valid.length < 30) {
+    throw new Error(`Part 5 유효 문제 부족: ${valid.length}/30`);
+  }
+
   const ts = Date.now();
-  const data = questions.slice(0, 30).map((q, i) => ({
+  const data = valid.slice(0, 30).map((q, i) => ({
     id: `gen_p5_${ts}_${i}`,
     part: 5,
     questionText: q.questionText,
@@ -68,26 +98,45 @@ interface RawGroup {
 
 // Part 6: 4 passages × 4 questions = 16 questions
 export async function generatePart6(): Promise<string[]> {
-  const text = await callGemini(`Generate 4 TOEIC Part 6 passages with blank-fill questions.
-Return ONLY a valid JSON array, no other text.
+  const sampleGroups = await prisma.questionGroup.findMany({
+    where: { part: 6 },
+    include: { questions: { orderBy: { id: "asc" } } },
+    take: 3,
+  });
 
-Format:
+  const examples = sampleGroups.slice(0, 2).map((g, gi) =>
+    `[참고 지문 ${gi + 1}]\n${g.passageText?.slice(0, 300)}...\n\n` +
+    g.questions.slice(0, 4).map((q, qi) =>
+      `(${qi + 1}) ${q.questionText}: (A)${q.optionA} (B)${q.optionB} (C)${q.optionC} (D)${q.optionD} → ${q.answer}`
+    ).join("\n")
+  ).join("\n\n---\n\n");
+
+  const text = await callGemini(`당신은 TOEIC 전문 출제 위원입니다. 아래 참고 문제들의 스타일과 형식을 분석하여 새로운 Part 6 지문 4개를 만드세요.
+
+[참고 문제]:
+${examples || "(참고 데이터 없음 - TOEIC Part 6 표준 형식 사용)"}
+
+위 참고를 기반으로 새 지문 4개 생성. JSON 배열만 반환.
+
+절대 규칙:
+1. 각 지문에 빈칸 정확히 4개: (1)(2)(3)(4) 표시
+2. 각 빈칸 보기 4개(optionA~D)는 반드시 모두 다른 단어/표현 (중복 절대 금지)
+3. 정답 1개만
+4. 해설 한국어
+
+형식:
 [{
-  "passageText": "Dear Ms. Kim,\n\nWe are pleased to ------- (1) you that your application has been ------- (2) by our review committee. The interview will be ------- (3) at our main office on Friday at 2 PM. Please ------- (4) this opportunity seriously.\n\nBest regards,\nHR Department",
+  "passageText": "Dear Ms. Kim,\\n\\nWe are pleased to ------- (1) you that your application has been ------- (2)...",
   "questions": [
-    {"questionText":"(1)","optionA":"inform","optionB":"informing","optionC":"informed","optionD":"information","answer":"A","explanation":"to부정사 뒤에 동사원형이 와야 합니다."},
-    {"questionText":"(2)","optionA":"approve","optionB":"approved","optionC":"approving","optionD":"approval","answer":"B","explanation":"수동태 구조 has been + 과거분사이므로 approved가 정답입니다."},
-    {"questionText":"(3)","optionA":"hold","optionB":"held","optionC":"holding","optionD":"holds","answer":"B","explanation":"will be + 과거분사 수동태 구조입니다."},
-    {"questionText":"(4)","optionA":"take","optionB":"taking","optionC":"taken","optionD":"takes","answer":"A","explanation":"Please + 동사원형이므로 take가 정답입니다."}
+    {"questionText":"(1)","optionA":"inform","optionB":"informing","optionC":"informed","optionD":"information","answer":"A","explanation":"to부정사 뒤 동사원형"},
+    {"questionText":"(2)","optionA":"approve","optionB":"approved","optionC":"approving","optionD":"approval","answer":"B","explanation":"has been + 과거분사 수동태"},
+    {"questionText":"(3)","optionA":"hold","optionB":"held","optionC":"holding","optionD":"holds","answer":"B","explanation":"will be + 과거분사"},
+    {"questionText":"(4)","optionA":"take","optionB":"taking","optionC":"taken","optionD":"takes","answer":"A","explanation":"Please + 동사원형"}
   ]
 }]
 
-Requirements:
-- Each passage: business email, memo, notice, or announcement (150-200 words)
-- Exactly 4 blanks per passage marked as (1)(2)(3)(4)
-- Each blank tests different grammar point
-- Korean explanations
-- 4 different passage types`);
+지문 유형 4가지 (모두 다르게): 비즈니스 이메일, 사내 메모, 공지사항, 안내문
+각 지문 150-200 단어`);
 
   let groups: RawGroup[];
   try {
@@ -97,18 +146,24 @@ Requirements:
     throw new Error("Part 6 생성 실패");
   }
 
+  if (groups.length < 4) {
+    throw new Error(`Part 6 지문 부족: ${groups.length}/4`);
+  }
+
   const ts = Date.now();
   const allIds: string[] = [];
 
-  for (let gi = 0; gi < Math.min(groups.length, 4); gi++) {
+  for (let gi = 0; gi < 4; gi++) {
     const group = groups[gi];
+    const validQs = (group.questions || []).filter(isValidQuestion);
+    if (validQs.length < 4) {
+      throw new Error(`Part 6 그룹 ${gi} 유효 문제 부족: ${validQs.length}/4`);
+    }
     const groupId = `gen_g6_${ts}_${gi}`;
-
     await prisma.questionGroup.create({
       data: { id: groupId, part: 6, passageText: group.passageText, passageType: "memo" }
     });
-
-    const questionData = (group.questions || []).slice(0, 4).map((q, qi) => ({
+    const questionData = validQs.slice(0, 4).map((q, qi) => ({
       id: `gen_q6_${ts}_${gi}_${qi}`,
       part: 6,
       groupId,
@@ -120,9 +175,12 @@ Requirements:
       answer: (q.answer || "A").toUpperCase().charAt(0),
       explanation: q.explanation || "",
     }));
-
     await prisma.question.createMany({ data: questionData });
     allIds.push(...questionData.map(d => d.id));
+  }
+
+  if (allIds.length !== 16) {
+    throw new Error(`Part 6 총 문제 수 불일치: ${allIds.length}/16`);
   }
 
   return allIds;
@@ -141,34 +199,54 @@ interface RawPart7 {
 
 // Part 7: 2중 3세트(8q×3=24) + 3중 2세트(9q×2=18) + 4중 1세트(12q) = 54 questions
 export async function generatePart7(): Promise<string[]> {
-  const text = await callGemini(`Generate TOEIC Part 7 reading comprehension sets.
-Return ONLY valid JSON, no other text.
+  const sampleGroups = await prisma.questionGroup.findMany({
+    where: { part: 7 },
+    include: { questions: { orderBy: { id: "asc" } } },
+    take: 4,
+  });
 
-Structure:
+  const examples = sampleGroups.slice(0, 2).map((g, gi) =>
+    `[참고 세트 ${gi + 1}] (${g.passageType || "지문"})\n지문:\n${g.passageText?.slice(0, 350)}...\n\n` +
+    `문제 예시:\n` +
+    g.questions.slice(0, 3).map((q, qi) =>
+      `${qi + 1}. ${q.questionText}\n(A)${q.optionA} (B)${q.optionB} (C)${q.optionC} (D)${q.optionD}`
+    ).join("\n")
+  ).join("\n\n---\n\n");
+
+  const text = await callGemini(`당신은 TOEIC 전문 출제 위원입니다. 아래 참고 문제들의 스타일, 지문 유형, 난이도를 분석하여 새로운 Part 7 세트를 만드세요.
+
+[참고 문제]:
+${examples || "(참고 데이터 없음 - TOEIC Part 7 표준 형식 사용)"}
+
+위 참고를 기반으로 아래 구조의 문제 세트 생성. JSON만 반환.
+
+절대 규칙:
+1. 보기 4개(optionA~D)는 반드시 모두 다른 내용 (중복 절대 금지)
+2. 정답 1개만
+3. 해설 한국어
+4. 문제 수를 정확히 맞출 것: doubles 각 8문제, triples 각 9문제, quads 정확히 12문제
+
+구조 (정확히 이 수량):
 {
   "doubles": [
-    {"passages":["passage1 150-200 words","passage2 150-200 words"],"questions":[8 questions]},
-    {"passages":["passage1","passage2"],"questions":[8 questions]},
-    {"passages":["passage1","passage2"],"questions":[8 questions]}
+    {"passages":["지문1 (150-200단어)","지문2 (150-200단어)"],"questions":[정확히 8개]},
+    {"passages":["지문1","지문2"],"questions":[정확히 8개]},
+    {"passages":["지문1","지문2"],"questions":[정확히 8개]}
   ],
   "triples": [
-    {"passages":["p1 120-150 words","p2","p3"],"questions":[9 questions]},
-    {"passages":["p1","p2","p3"],"questions":[9 questions]}
+    {"passages":["지문1 (120-150단어)","지문2","지문3"],"questions":[정확히 9개]},
+    {"passages":["지문1","지문2","지문3"],"questions":[정확히 9개]}
   ],
   "quads": [
-    {"passages":["p1 100-120 words","p2","p3","p4"],"questions":[12 questions]}
+    {"passages":["지문1 (100-120단어)","지문2","지문3","지문4"],"questions":[정확히 12개]}
   ]
 }
 
-Each question format:
-{"questionText":"What is the main purpose of the email?","optionA":"To request a refund","optionB":"To schedule a meeting","optionC":"To announce a policy","optionD":"To apply for a position","answer":"B","explanation":"이메일 첫 단락에서 meeting 일정을 알린다고 명시되어 있습니다."}
-
-Double set topics (use different topics for each): job posting+cover letter, news article+press release, product ad+customer review
-Triple set topics: company policy+employee email+manager reply, event notice+registration+confirmation email
-Quad set topic: job ad+application letter+interview invitation+offer letter
-
-Question types: main idea, specific detail, NOT mentioned, inference, vocabulary in context, cross-passage reference
-Korean explanations, TOEIC 650-900 difficulty`);
+문제 유형 (각 세트에 혼합): 주제/목적, 세부사항, NOT mentioned, 추론, 어휘, 복수지문 연계
+2중 주제: 구인공고+지원서 / 뉴스기사+보도자료 / 상품광고+고객리뷰
+3중 주제: 회사정책+직원이메일+상사회신 / 행사안내+등록+확인이메일
+4중 주제: 구인공고+지원서+면접초대+합격통보
+난이도: TOEIC 650-900`);
 
   let data: RawPart7;
   try {
@@ -178,11 +256,23 @@ Korean explanations, TOEIC 650-900 difficulty`);
     throw new Error("Part 7 생성 실패");
   }
 
+  const doubles = data.doubles || [];
+  const triples = data.triples || [];
+  const quads = data.quads || [];
+
+  if (doubles.length < 3 || triples.length < 2 || quads.length < 1) {
+    throw new Error(`Part 7 세트 수 부족: doubles=${doubles.length}/3, triples=${triples.length}/2, quads=${quads.length}/1`);
+  }
+
   const ts = Date.now();
   const allIds: string[] = [];
 
   async function insertSet(set: RawPart7Set, type: string, idx: number, qCount: number) {
-    if (!set?.passages?.length) return;
+    if (!set?.passages?.length) throw new Error(`Part 7 ${type}[${idx}] passages 없음`);
+    const validQs = (set.questions || []).filter(isValidQuestion);
+    if (validQs.length < qCount) {
+      throw new Error(`Part 7 ${type}[${idx}] 문제 부족: ${validQs.length}/${qCount}`);
+    }
     const combinedPassage = set.passages
       .map((p, i) => `[지문 ${i + 1}]\n\n${p}`)
       .join("\n\n──────────────────────\n\n");
@@ -190,7 +280,7 @@ Korean explanations, TOEIC 650-900 difficulty`);
     await prisma.questionGroup.create({
       data: { id: groupId, part: 7, passageText: combinedPassage, passageType: type }
     });
-    const questions = (set.questions || []).slice(0, qCount).map((q, qi) => ({
+    const questions = validQs.slice(0, qCount).map((q, qi) => ({
       id: `gen_q7_${type}_${ts}_${idx}_${qi}`,
       part: 7,
       groupId,
@@ -206,14 +296,12 @@ Korean explanations, TOEIC 650-900 difficulty`);
     allIds.push(...questions.map(d => d.id));
   }
 
-  for (let i = 0; i < (data.doubles || []).length; i++) {
-    await insertSet(data.doubles[i], "double", i, 8);
-  }
-  for (let i = 0; i < (data.triples || []).length; i++) {
-    await insertSet(data.triples[i], "triple", i, 9);
-  }
-  for (let i = 0; i < (data.quads || []).length; i++) {
-    await insertSet(data.quads[i], "quad", i, 12);
+  for (let i = 0; i < 3; i++) await insertSet(doubles[i], "double", i, 8);
+  for (let i = 0; i < 2; i++) await insertSet(triples[i], "triple", i, 9);
+  await insertSet(quads[0], "quad", 0, 12);
+
+  if (allIds.length !== 54) {
+    throw new Error(`Part 7 총 문제 수 불일치: ${allIds.length}/54`);
   }
 
   return allIds;
