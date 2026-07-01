@@ -160,7 +160,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base">실전 모의고사</div>
-          <div className="text-xs text-blue-200 mt-0.5">Part 5+6+7 · 75문제 · 75분</div>
+          <div className="text-xs text-blue-200 mt-0.5">Part 5+6+7 · 100문제 · 75분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part5")}
@@ -181,7 +181,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 7 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">2중·3중·4중 지문 · 29문제 · 55분</div>
+          <div className="text-xs text-slate-400 mt-0.5">2중·3중·4중 지문 · 54문제 · 55분</div>
         </button>
 
         {/* 시험 기록 버튼 */}

@@ -144,16 +144,16 @@ interface RawPart7Set {
 }
 
 interface RawPart7 {
-  double: RawPart7Set;
-  triple: RawPart7Set;
-  quad: RawPart7Set;
+  doubles: RawPart7Set[];
+  triples: RawPart7Set[];
+  quads: RawPart7Set[];
 }
 
-// Part 7: 2중(8q) + 3중(9q) + 4중(12q) = 29 questions
+// Part 7: 2중 3세트(8q×3=24) + 3중 2세트(9q×2=18) + 4중 1세트(12q) = 54 questions
 export async function generatePart7(): Promise<string[]> {
   const result = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 16000,
+    max_tokens: 20000,
     messages: [{
       role: "user",
       content: `Generate TOEIC Part 7 reading comprehension sets.
@@ -161,28 +161,28 @@ Return ONLY valid JSON, no other text.
 
 Structure:
 {
-  "double": {
-    "passages": ["First passage 150-200 words", "Second related passage 150-200 words"],
-    "questions": [array of exactly 8 questions]
-  },
-  "triple": {
-    "passages": ["Passage 1 120-150 words", "Passage 2 120-150 words", "Passage 3 120-150 words"],
-    "questions": [array of exactly 9 questions]
-  },
-  "quad": {
-    "passages": ["Passage 1 100-120 words","Passage 2 100-120 words","Passage 3 100-120 words","Passage 4 100-120 words"],
-    "questions": [array of exactly 12 questions]
-  }
+  "doubles": [
+    {"passages":["passage1 150-200 words","passage2 150-200 words"],"questions":[8 questions]},
+    {"passages":["passage1","passage2"],"questions":[8 questions]},
+    {"passages":["passage1","passage2"],"questions":[8 questions]}
+  ],
+  "triples": [
+    {"passages":["p1 120-150 words","p2","p3"],"questions":[9 questions]},
+    {"passages":["p1","p2","p3"],"questions":[9 questions]}
+  ],
+  "quads": [
+    {"passages":["p1 100-120 words","p2","p3","p4"],"questions":[12 questions]}
+  ]
 }
 
-Each question:
-{"questionText":"What is the purpose of the first email?","optionA":"To request a refund","optionB":"To schedule a meeting","optionC":"To announce a promotion","optionD":"To submit an application","answer":"B","explanation":"첫 번째 이메일에서 'schedule a meeting'이라고 명시되어 있습니다."}
+Each question format:
+{"questionText":"What is the main purpose of the email?","optionA":"To request a refund","optionB":"To schedule a meeting","optionC":"To announce a policy","optionD":"To apply for a position","answer":"B","explanation":"이메일 첫 단락에서 meeting 일정을 알린다고 명시되어 있습니다."}
 
-Double set ideas: job posting + cover letter, news article + response letter, product ad + customer review
-Triple set ideas: company policy + employee email + manager response, event notice + registration form + confirmation
-Quad set ideas: job ad + application + interview invite + offer letter, product info + complaint + response + update
+Double set topics (use different topics for each): job posting+cover letter, news article+press release, product ad+customer review
+Triple set topics: company policy+employee email+manager reply, event notice+registration+confirmation email
+Quad set topic: job ad+application letter+interview invitation+offer letter
 
-Mix question types: main idea, specific detail, inference, vocabulary in context, cross-passage
+Question types: main idea, specific detail, NOT mentioned, inference, vocabulary in context, cross-passage reference
 Korean explanations, TOEIC 650-900 difficulty`
     }]
   });
@@ -199,27 +199,17 @@ Korean explanations, TOEIC 650-900 difficulty`
   const ts = Date.now();
   const allIds: string[] = [];
 
-  const sets: { key: keyof RawPart7; type: string; qCount: number }[] = [
-    { key: "double", type: "double", qCount: 8 },
-    { key: "triple", type: "triple", qCount: 9 },
-    { key: "quad",   type: "quad",   qCount: 12 },
-  ];
-
-  for (const { key, type, qCount } of sets) {
-    const setData = data[key];
-    if (!setData?.passages?.length) continue;
-
-    const combinedPassage = setData.passages
+  async function insertSet(set: RawPart7Set, type: string, idx: number, qCount: number) {
+    if (!set?.passages?.length) return;
+    const combinedPassage = set.passages
       .map((p, i) => `[지문 ${i + 1}]\n\n${p}`)
       .join("\n\n──────────────────────\n\n");
-
-    const groupId = `gen_g7_${type}_${ts}`;
+    const groupId = `gen_g7_${type}_${ts}_${idx}`;
     await prisma.questionGroup.create({
       data: { id: groupId, part: 7, passageText: combinedPassage, passageType: type }
     });
-
-    const questions = (setData.questions || []).slice(0, qCount).map((q, qi) => ({
-      id: `gen_q7_${type}_${ts}_${qi}`,
+    const questions = (set.questions || []).slice(0, qCount).map((q, qi) => ({
+      id: `gen_q7_${type}_${ts}_${idx}_${qi}`,
       part: 7,
       groupId,
       questionText: q.questionText,
@@ -230,9 +220,18 @@ Korean explanations, TOEIC 650-900 difficulty`
       answer: (q.answer || "A").toUpperCase().charAt(0),
       explanation: q.explanation || "",
     }));
-
     await prisma.question.createMany({ data: questions });
     allIds.push(...questions.map(d => d.id));
+  }
+
+  for (let i = 0; i < (data.doubles || []).length; i++) {
+    await insertSet(data.doubles[i], "double", i, 8);
+  }
+  for (let i = 0; i < (data.triples || []).length; i++) {
+    await insertSet(data.triples[i], "triple", i, 9);
+  }
+  for (let i = 0; i < (data.quads || []).length; i++) {
+    await insertSet(data.quads[i], "quad", i, 12);
   }
 
   return allIds;
