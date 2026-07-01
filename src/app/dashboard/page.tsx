@@ -99,9 +99,9 @@ function DashboardContent() {
     load();
   }, [router]);
 
-  // 동시 접속 감지: 30초마다 세션 확인
+  // 동시 접속 감지: 3초 폴링 + 탭 전환 즉시 체크
   useEffect(() => {
-    const interval = setInterval(async () => {
+    async function checkSession() {
       try {
         const res = await fetch("/api/auth/me");
         const data = await res.json();
@@ -109,8 +109,17 @@ function DashboardContent() {
           router.push(data?.kicked ? "/login?kicked=1" : "/login");
         }
       } catch { /* 네트워크 오류 무시 */ }
-    }, 30000);
-    return () => clearInterval(interval);
+    }
+    const interval = setInterval(checkSession, 3000);
+    const onFocus = () => checkSession();
+    const onVisible = () => { if (document.visibilityState === "visible") checkSession(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router]);
 
   async function logout() {

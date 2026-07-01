@@ -1,6 +1,15 @@
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 type Mode = "full" | "part5" | "part6" | "part7";
 
 type GroupWithQuestions = Awaited<ReturnType<typeof prisma.questionGroup.findMany<{
@@ -31,35 +40,35 @@ export async function POST(req: Request) {
 
   const questions: QWithGroup[] = [];
 
-  // ── Part 5: ai_ 접두어 문제만 고정 순서로 선택 (항상 동일한 30문제)
+  // ── Part 5: 풀에서 랜덤으로 30문제 선택
   if (mode === "full" || mode === "part5") {
     const all5 = await prisma.question.findMany({
       where: { part: 5, id: { startsWith: "ai_p5" } },
-      orderBy: { id: "asc" },
     });
-    questions.push(...all5.map(q => ({ ...q, group: null })));
+    const selected5 = shuffle(all5).slice(0, 30);
+    questions.push(...selected5.map(q => ({ ...q, group: null })));
   }
 
-  // ── Part 6: ai_ 접두어 그룹만 고정 순서로 선택 (항상 동일한 16문제)
+  // ── Part 6: 풀에서 랜덤으로 4그룹 선택 (16문제)
   if (mode === "full" || mode === "part6") {
-    const p6Groups = await prisma.questionGroup.findMany({
+    const allG6 = await prisma.questionGroup.findMany({
       where: { part: 6, id: { startsWith: "ai_g6" } },
       include: { questions: { orderBy: { id: "asc" } } },
-      orderBy: { id: "asc" },
     });
-    for (const { questions: qs, ...meta } of p6Groups) {
+    const selectedG6 = shuffle(allG6).slice(0, 4);
+    for (const { questions: qs, ...meta } of selectedG6) {
       for (const q of qs) questions.push({ ...q, group: meta });
     }
   }
 
-  // ── Part 7: ai_ 접두어 그룹만 고정 순서로 선택 (항상 동일한 54문제)
+  // ── Part 7: 풀에서 랜덤으로 15그룹 선택 (54문제)
   if (mode === "full" || mode === "part7") {
-    const p7Groups = await prisma.questionGroup.findMany({
+    const allG7 = await prisma.questionGroup.findMany({
       where: { part: 7, id: { startsWith: "ai_g7" } },
       include: { questions: { orderBy: { id: "asc" } } },
-      orderBy: { id: "asc" },
     });
-    for (const { questions: qs, ...meta } of p7Groups) {
+    const selectedG7 = shuffle(allG7).slice(0, 15);
+    for (const { questions: qs, ...meta } of selectedG7) {
       for (const q of qs) questions.push({ ...q, group: meta });
     }
   }

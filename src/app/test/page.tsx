@@ -171,7 +171,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 5 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">단문 빈칸 · 30문제 · 25분{counts ? ` (문제 풀: ${counts.p5}개)` : ""}</div>
+          <div className="text-xs text-slate-400 mt-0.5">단문 빈칸 · 30문제 · 25분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part6")}
@@ -228,8 +228,16 @@ function TestQuiz({ mode }: { mode: Mode }) {
       }).catch(() => {});
     }
     checkSession();
-    const interval = setInterval(checkSession, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkSession, 3000);
+    const onFocus = () => checkSession();
+    const onVisible = () => { if (document.visibilityState === "visible") checkSession(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router]);
 
   // DB에서 저장된 문제 목록 불러오기
