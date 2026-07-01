@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { vocab, VocabWord } from "@/lib/vocab";
-import CaptureProtect, { ContentWatermark } from "@/components/CaptureProtect";
+import CaptureProtect from "@/components/CaptureProtect";
 
 type Mode = "select" | "practice" | "test" | "history";
 type Direction = "ko-en" | "en-ko";
@@ -79,7 +79,7 @@ function checkAnswer(userInput: string, expected: string): boolean {
 }
 
 // ── 단어 연습 ───────────────────────────────────────────────
-function PracticeMode({ onBack, watermark }: { onBack: () => void; watermark?: string }) {
+function PracticeMode({ onBack }: { onBack: () => void }) {
   const [quiz] = useState<QuizItem[]>(buildQuiz);
   const [index, setIndex] = useState(0);
   const [input, setInput] = useState("");
@@ -171,7 +171,6 @@ function PracticeMode({ onBack, watermark }: { onBack: () => void; watermark?: s
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-8 relative">
-          {watermark && <ContentWatermark label={watermark} />}
           <div className="flex items-center justify-between mb-6">
             <p className="text-xs font-medium text-slate-400">{dirLabel}</p>
             {isMulti && !submitted && (
@@ -251,7 +250,7 @@ function PracticeMode({ onBack, watermark }: { onBack: () => void; watermark?: s
 }
 
 // ── 단어 테스트 ─────────────────────────────────────────────
-function TestMode({ onBack, watermark }: { onBack: () => void; watermark?: string }) {
+function TestMode({ onBack }: { onBack: () => void }) {
   const [quiz] = useState<QuizItem[]>(buildQuiz);
   const [index, setIndex] = useState(0);
   const [input, setInput] = useState("");
@@ -410,7 +409,6 @@ function TestMode({ onBack, watermark }: { onBack: () => void; watermark?: strin
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-8 relative">
-          {watermark && <ContentWatermark label={watermark} />}
           <div className="flex items-center justify-between mb-6">
             <p className="text-xs font-medium text-slate-400">{dirLabel}</p>
             {isMulti && (
@@ -452,7 +450,6 @@ export default function VocabularyPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("select");
   const [authChecked, setAuthChecked] = useState(false);
-  const [watermarkLabel, setWatermarkLabel] = useState("");
 
   useEffect(() => {
     fetch("/api/auth/me").then(async (r) => {
@@ -462,7 +459,6 @@ export default function VocabularyPage() {
         return;
       }
       const { user } = data;
-      if (user.name) setWatermarkLabel(`${user.name} ${user.email}`);
       const isAdmin = user.role === "ADMIN";
       const expired = !user.planExpiresAt || new Date(user.planExpiresAt) < new Date();
       const canVocab = isAdmin || (!expired && ["VOCAB", "TEST_VOCAB", "ALL"].includes(user.plan));
@@ -494,8 +490,8 @@ export default function VocabularyPage() {
     );
   }
 
-  if (mode === "practice") return <PracticeMode onBack={() => setMode("select")} watermark={watermarkLabel} />;
-  if (mode === "test") return <TestMode onBack={() => setMode("select")} watermark={watermarkLabel} />;
+  if (mode === "practice") return <PracticeMode onBack={() => setMode("select")} />;
+  if (mode === "test") return <TestMode onBack={() => setMode("select")} />;
   if (mode === "history") return <HistoryMode onBack={() => setMode("select")} />;
 
   return (

@@ -74,39 +74,3 @@ export default function CaptureProtect({ page = "unknown" }: { page?: string }) 
   return null;
 }
 
-export function ContentWatermark({ label }: { label: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: "absolute",
-        inset: 0,
-        overflow: "hidden",
-        pointerEvents: "none",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        zIndex: 1,
-      }}
-    >
-      {Array.from({ length: 8 }).map((_, row) =>
-        Array.from({ length: 4 }).map((_, col) => (
-          <span
-            key={`${row}-${col}`}
-            style={{
-              position: "absolute",
-              top: `${row * 60 - 10}px`,
-              left: `${col * 220 - 30}px`,
-              transform: "rotate(-20deg)",
-              fontSize: "10px",
-              color: "rgba(0,0,0,0.12)",
-              whiteSpace: "nowrap",
-              fontFamily: "sans-serif",
-            }}
-          >
-            {label}
-          </span>
-        ))
-      )}
-    </div>
-  );
-}
