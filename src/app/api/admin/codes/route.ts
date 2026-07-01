@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   // 벌크 생성: { bulk: true, count, plan, durationDays, label, prefix }
   if (body.bulk) {
     const { count, plan, durationDays, label, prefix } = body;
-    const n = Math.min(Math.max(1, Number(count)), 100);
+    const n = Math.max(1, Number(count));
 
     const toCreate = [];
     const tried = new Set<string>();

@@ -49,7 +49,7 @@ export default function AdminCodesPage() {
     setSaving(true);
     setMessage("");
 
-    const count = Math.min(Math.max(1, bulk), 100);
+    const count = Math.max(1, bulk);
 
     if (count === 1) {
       const res = await fetch("/api/admin/codes", {
@@ -160,9 +160,8 @@ export default function AdminCodesPage() {
                 <input
                   type="number"
                   value={bulk}
-                  onChange={(e) => setBulk(Math.min(Number(e.target.value), 100))}
+                  onChange={(e) => setBulk(Math.max(1, Number(e.target.value)))}
                   min={1}
-                  max={100}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                 />
               </div>
