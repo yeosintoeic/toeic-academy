@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import CaptureProtect from "@/components/CaptureProtect";
 
 interface Question {
   id: string;
@@ -418,8 +419,11 @@ function TestContent() {
 
 export default function TestPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
-      <TestContent />
-    </Suspense>
+    <>
+      <CaptureProtect />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
+        <TestContent />
+      </Suspense>
+    </>
   );
 }

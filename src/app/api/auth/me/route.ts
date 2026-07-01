@@ -7,7 +7,7 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { id: true, name: true, role: true, plan: true, planExpiresAt: true },
+    select: { id: true, name: true, email: true, role: true, plan: true, planExpiresAt: true },
   });
   return Response.json({ user });
 }
