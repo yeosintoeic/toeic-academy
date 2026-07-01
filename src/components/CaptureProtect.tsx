@@ -10,15 +10,28 @@ function logCapture(type: string, page: string) {
   }).catch(() => {});
 }
 
+function detectIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 export default function CaptureProtect({ page = "unknown", userEmail = "" }: { page?: string; userEmail?: string }) {
   const patchedRef = useRef(false);
   const screenshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [warning, setWarning] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   const trigger = (type: string) => {
     logCapture(type, page);
     setWarning(true);
   };
+
+  useEffect(() => {
+    setIsIOS(detectIOS());
+  }, []);
 
   useEffect(() => {
     const blockMenu = (e: MouseEvent) => e.preventDefault();
@@ -117,40 +130,65 @@ export default function CaptureProtect({ page = "unknown", userEmail = "" }: { p
 
   // 워터마크: 캡처 시 사용자 이메일이 찍혀서 추적 가능
   const watermarkText = userEmail || "여신토익 © 무단배포금지";
+  // iOS는 워터마크를 더 진하게 표시 (스크린샷 감지 불가로 시각적 추적에 의존)
+  const wmOpacity = isIOS ? 0.09 : 0.045;
 
   if (!warning) {
     return (
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 9990,
-          overflow: "hidden",
-        }}
-      >
-        {Array.from({ length: 8 }).map((_, row) =>
-          Array.from({ length: 4 }).map((_, col) => (
-            <span
-              key={`${row}-${col}`}
-              style={{
-                position: "absolute",
-                top: `${row * 13 + 5}%`,
-                left: `${col * 26 + 3}%`,
-                fontSize: "11px",
-                color: "rgba(0,0,0,0.045)",
-                transform: "rotate(-30deg)",
-                whiteSpace: "nowrap",
-                userSelect: "none",
-                fontFamily: "monospace",
-              }}
-            >
-              {watermarkText}
-            </span>
-          ))
+      <>
+        {/* iOS 전용 경고 배너: iOS에서는 스크린샷 이벤트 감지 불가 */}
+        {isIOS && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 9992,
+              backgroundColor: "rgba(185, 28, 28, 0.95)",
+              color: "white",
+              padding: "10px 16px",
+              textAlign: "center",
+              fontSize: "12px",
+              lineHeight: "1.5",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            📵 모든 캡처에는 사용자 식별 워터마크가 포함됩니다. 무단 배포 시 저작권법 위반으로 처벌받을 수 있습니다.
+          </div>
         )}
-      </div>
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 9990,
+            overflow: "hidden",
+          }}
+        >
+          {Array.from({ length: 8 }).map((_, row) =>
+            Array.from({ length: 4 }).map((_, col) => (
+              <span
+                key={`${row}-${col}`}
+                style={{
+                  position: "absolute",
+                  top: `${row * 13 + 5}%`,
+                  left: `${col * 26 + 3}%`,
+                  fontSize: "11px",
+                  color: `rgba(0,0,0,${wmOpacity})`,
+                  transform: "rotate(-30deg)",
+                  whiteSpace: "nowrap",
+                  userSelect: "none",
+                  fontFamily: "monospace",
+                }}
+              >
+                {watermarkText}
+              </span>
+            ))
+          )}
+        </div>
+      </>
     );
   }
 

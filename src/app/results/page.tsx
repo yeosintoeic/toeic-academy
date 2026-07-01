@@ -95,11 +95,17 @@ function ResultContent() {
   );
 
   const { mode, part5Score, part6Score, part7Score, totalScore, totalQuestions, answers } = result;
+
+  // 실제 답변 기반으로 파트별 총 문제 수 계산 (하드코딩 대신 실제 생성된 수 반영)
+  const part5Total = answers.filter(a => a.question.part === 5).length;
+  const part6Total = answers.filter(a => a.question.part === 6).length;
+  const part7Total = answers.filter(a => a.question.part === 7).length;
+
   const pct = totalQuestions > 0 ? Math.round((totalScore / totalQuestions) * 100) : 0;
   const rcScore = toRCScore(totalScore, totalQuestions);
   const isPartOnly = mode === "part5" || mode === "part6" || mode === "part7";
   const partLabel: Record<string, string> = { part5: "Part 5", part6: "Part 6", part7: "Part 7" };
-  const partTotal: Record<string, number> = { part5: 30, part6: 16, part7: 54 };
+  const partTotal: Record<string, number> = { part5: part5Total || 30, part6: part6Total || 16, part7: part7Total || 54 };
   const partScore: Record<string, number> = { part5: part5Score, part6: part6Score, part7: part7Score };
 
   const seenGroupIds = new Set<string>();
@@ -160,15 +166,18 @@ function ResultContent() {
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="bg-slate-50 rounded-xl p-4">
                   <p className="text-xs text-slate-500 mb-1">Part 5</p>
-                  <p className="text-xl font-bold text-slate-800">{part5Score}<span className="text-sm font-normal text-slate-400"> / 30</span></p>
+                  <p className="text-xl font-bold text-slate-800">{part5Score}<span className="text-sm font-normal text-slate-400"> / {part5Total || 30}</span></p>
+                  {part5Total > 0 && <p className="text-xs text-slate-400 mt-1">{Math.round((part5Score / part5Total) * 100)}%</p>}
                 </div>
                 <div className="bg-slate-50 rounded-xl p-4">
                   <p className="text-xs text-slate-500 mb-1">Part 6</p>
-                  <p className="text-xl font-bold text-slate-800">{part6Score}<span className="text-sm font-normal text-slate-400"> / 16</span></p>
+                  <p className="text-xl font-bold text-slate-800">{part6Score}<span className="text-sm font-normal text-slate-400"> / {part6Total || 16}</span></p>
+                  {part6Total > 0 && <p className="text-xs text-slate-400 mt-1">{Math.round((part6Score / part6Total) * 100)}%</p>}
                 </div>
                 <div className="bg-slate-50 rounded-xl p-4">
                   <p className="text-xs text-slate-500 mb-1">Part 7</p>
-                  <p className="text-xl font-bold text-slate-800">{part7Score}<span className="text-sm font-normal text-slate-400"> / 54</span></p>
+                  <p className="text-xl font-bold text-slate-800">{part7Score}<span className="text-sm font-normal text-slate-400"> / {part7Total || 54}</span></p>
+                  {part7Total > 0 && <p className="text-xs text-slate-400 mt-1">{Math.round((part7Score / part7Total) * 100)}%</p>}
                 </div>
               </div>
               <div className={`rounded-xl p-4 mb-6 text-sm ${
