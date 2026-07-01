@@ -22,6 +22,9 @@ export default function LoginPage() {
       setEmail(saved);
       setRememberEmail(true);
     }
+    if (new URLSearchParams(window.location.search).get("kicked") === "1") {
+      setError("다른 기기에서 로그인되어 자동으로 로그아웃되었습니다.");
+    }
   }, []);
 
   async function handleSubmit(e: { preventDefault(): void }) {

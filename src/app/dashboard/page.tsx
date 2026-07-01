@@ -81,9 +81,12 @@ function DashboardContent() {
           fetch("/api/auth/me"),
           fetch("/api/test/history"),
         ]);
-        if (!meRes.ok) { router.push("/login"); return; }
-        const { user } = await meRes.json();
-        if (!user) { router.push("/login"); return; }
+        const meData = await meRes.json();
+        if (!meRes.ok || !meData.user) {
+          router.push(meData?.kicked ? "/login?kicked=1" : "/login");
+          return;
+        }
+        const { user } = meData;
         const hist = await histRes.json().catch(() => []);
         setUser(user);
         setHistory(Array.isArray(hist) ? hist : []);

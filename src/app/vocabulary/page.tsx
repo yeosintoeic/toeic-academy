@@ -453,9 +453,12 @@ export default function VocabularyPage() {
 
   useEffect(() => {
     fetch("/api/auth/me").then(async (r) => {
-      if (!r.ok) { router.push("/login"); return; }
-      const { user } = await r.json();
-      if (!user) { router.push("/login"); return; }
+      const data = await r.json();
+      if (!r.ok || !data.user) {
+        router.push(data?.kicked ? "/login?kicked=1" : "/login");
+        return;
+      }
+      const { user } = data;
       const isAdmin = user.role === "ADMIN";
       const expired = !user.planExpiresAt || new Date(user.planExpiresAt) < new Date();
       const canVocab = isAdmin || (!expired && ["VOCAB", "TEST_VOCAB", "ALL"].includes(user.plan));

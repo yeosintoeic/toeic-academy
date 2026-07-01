@@ -43,13 +43,14 @@ export async function POST(req: NextRequest) {
     }, { status: 401 });
   }
 
-  // 로그인 성공 → 시도 횟수 초기화
+  // 로그인 성공 → 시도 횟수 초기화 + 새 세션 nonce 생성 (동시 접속 방지)
+  const sessionNonce = crypto.randomUUID();
   await prisma.user.update({
     where: { id: user.id },
-    data: { loginAttempts: 0 },
+    data: { loginAttempts: 0, sessionNonce },
   });
 
-  const token = await signToken({ id: user.id, role: user.role, name: user.name });
+  const token = await signToken({ id: user.id, role: user.role, name: user.name, sessionNonce });
   const cookieStore = await cookies();
   cookieStore.set("token", token, {
     httpOnly: true,
