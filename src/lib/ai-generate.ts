@@ -1,7 +1,13 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import prisma from "@/lib/prisma";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+async function callGemini(prompt: string): Promise<string> {
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
 
 function parseJSON<T>(text: string): T {
   const cleaned = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```\s*$/m, "").trim();
@@ -20,12 +26,7 @@ interface RawQuestion {
 
 // Part 5: 30 standalone grammar/vocab questions
 export async function generatePart5(): Promise<string[]> {
-  const result = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 8000,
-    messages: [{
-      role: "user",
-      content: `You are a TOEIC expert. Generate exactly 30 TOEIC Part 5 questions.
+  const text = await callGemini(`You are a TOEIC expert. Generate exactly 30 TOEIC Part 5 questions.
 Return ONLY a valid JSON array, no other text.
 
 Format:
@@ -33,11 +34,8 @@ Format:
 
 Mix these grammar topics evenly: prepositions, modal verbs, verb tenses, parts of speech (noun/verb/adj/adv), relative clauses, conjunctions, infinitives, gerunds, passive voice
 Business English context, TOEIC 600-900 difficulty
-Korean explanations`
-    }]
-  });
+Korean explanations`);
 
-  const text = result.content[0].type === "text" ? result.content[0].text : "[]";
   let questions: RawQuestion[];
   try {
     questions = parseJSON<RawQuestion[]>(text);
@@ -70,12 +68,7 @@ interface RawGroup {
 
 // Part 6: 4 passages × 4 questions = 16 questions
 export async function generatePart6(): Promise<string[]> {
-  const result = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 10000,
-    messages: [{
-      role: "user",
-      content: `Generate 4 TOEIC Part 6 passages with blank-fill questions.
+  const text = await callGemini(`Generate 4 TOEIC Part 6 passages with blank-fill questions.
 Return ONLY a valid JSON array, no other text.
 
 Format:
@@ -94,11 +87,8 @@ Requirements:
 - Exactly 4 blanks per passage marked as (1)(2)(3)(4)
 - Each blank tests different grammar point
 - Korean explanations
-- 4 different passage types`
-    }]
-  });
+- 4 different passage types`);
 
-  const text = result.content[0].type === "text" ? result.content[0].text : "[]";
   let groups: RawGroup[];
   try {
     groups = parseJSON<RawGroup[]>(text);
@@ -151,12 +141,7 @@ interface RawPart7 {
 
 // Part 7: 2중 3세트(8q×3=24) + 3중 2세트(9q×2=18) + 4중 1세트(12q) = 54 questions
 export async function generatePart7(): Promise<string[]> {
-  const result = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 20000,
-    messages: [{
-      role: "user",
-      content: `Generate TOEIC Part 7 reading comprehension sets.
+  const text = await callGemini(`Generate TOEIC Part 7 reading comprehension sets.
 Return ONLY valid JSON, no other text.
 
 Structure:
@@ -183,11 +168,8 @@ Triple set topics: company policy+employee email+manager reply, event notice+reg
 Quad set topic: job ad+application letter+interview invitation+offer letter
 
 Question types: main idea, specific detail, NOT mentioned, inference, vocabulary in context, cross-passage reference
-Korean explanations, TOEIC 650-900 difficulty`
-    }]
-  });
+Korean explanations, TOEIC 650-900 difficulty`);
 
-  const text = result.content[0].type === "text" ? result.content[0].text : "{}";
   let data: RawPart7;
   try {
     data = parseJSON<RawPart7>(text);
