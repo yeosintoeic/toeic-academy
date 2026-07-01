@@ -144,6 +144,11 @@ function TestHistory({ onBack }: { onBack: () => void }) {
 // ── 유형 선택 화면 ───────────────────────────────────────────
 function ModeSelect({ onHistory }: { onHistory: () => void }) {
   const router = useRouter();
+  const [counts, setCounts] = useState<{ p5: number; p6: number; p7: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/question-counts").then(r => r.json()).then(d => setCounts(d)).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -166,21 +171,21 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 5 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">단문 빈칸 · 30문제 · 25분</div>
+          <div className="text-xs text-slate-400 mt-0.5">단문 빈칸 · 30문제 · 25분{counts ? ` (문제 풀: ${counts.p5}개)` : ""}</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part6")}
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 6 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">장문 빈칸 · 지문별 연습 · 15분</div>
+          <div className="text-xs text-slate-400 mt-0.5">장문 빈칸 · {counts ? `${counts.p6}문제` : "지문별 연습"} · 15분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part7")}
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 7 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">독해 · 지문별 연습 · 55분</div>
+          <div className="text-xs text-slate-400 mt-0.5">독해 · {counts ? `${counts.p7}문제` : "지문별 연습"} · 55분</div>
         </button>
 
         {/* 시험 기록 버튼 */}
@@ -217,10 +222,17 @@ function TestQuiz({ mode }: { mode: Mode }) {
   const [watermarkLabel, setWatermarkLabel] = useState("");
 
   useEffect(() => {
-    fetch("/api/auth/me").then(r => r.json()).then(d => {
-      if (d.user?.name) setWatermarkLabel(`${d.user.name} ${d.user.email}`);
-    }).catch(() => {});
-  }, []);
+    function checkSession() {
+      fetch("/api/auth/me").then(r => r.json()).then(d => {
+        if (d.kicked) { router.push("/login?kicked=1"); return; }
+        if (!d.user) { router.push("/login"); return; }
+        if (d.user.name) setWatermarkLabel(`${d.user.name} ${d.user.email}`);
+      }).catch(() => {});
+    }
+    checkSession();
+    const interval = setInterval(checkSession, 30000);
+    return () => clearInterval(interval);
+  }, [router]);
 
   const submitRef = useRef<() => void>(() => {});
 

@@ -99,6 +99,20 @@ function DashboardContent() {
     load();
   }, [router]);
 
+  // 동시 접속 감지: 30초마다 세션 확인
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = await res.json();
+        if (!res.ok || !data.user) {
+          router.push(data?.kicked ? "/login?kicked=1" : "/login");
+        }
+      } catch { /* 네트워크 오류 무시 */ }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [router]);
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");

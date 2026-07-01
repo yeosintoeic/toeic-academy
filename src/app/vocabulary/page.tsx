@@ -471,6 +471,21 @@ export default function VocabularyPage() {
     });
   }, [router]);
 
+  // 동시 접속 감지: 30초마다 세션 확인
+  useEffect(() => {
+    if (!authChecked) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        const data = await res.json();
+        if (!res.ok || !data.user) {
+          router.push(data?.kicked ? "/login?kicked=1" : "/login");
+        }
+      } catch { /* 네트워크 오류 무시 */ }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [authChecked, router]);
+
   if (!authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400">
