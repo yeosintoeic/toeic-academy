@@ -287,8 +287,33 @@ function ResultContent() {
                       </div>
 
                       {q.explanation && (
-                        <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 leading-relaxed">
-                          <span className="font-semibold text-slate-700">해설 </span>{q.explanation}
+                        <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
+                          {q.explanation.split("\n").map((line, li) => {
+                            if (line.startsWith("✅")) {
+                              return (
+                                <div key={li} className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-800 leading-relaxed">
+                                  {line}
+                                </div>
+                              );
+                            }
+                            if (line.startsWith("❌")) {
+                              return (
+                                <div key={li} className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-800 leading-relaxed">
+                                  {line}
+                                </div>
+                              );
+                            }
+                            if (line.startsWith("💡")) {
+                              return (
+                                <div key={li} className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 leading-relaxed font-medium">
+                                  {line}
+                                </div>
+                              );
+                            }
+                            return line.trim() ? (
+                              <p key={li} className="text-xs text-slate-500 leading-relaxed">{line}</p>
+                            ) : null;
+                          })}
                         </div>
                       )}
                     </div>
