@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [captureCount, setCaptureCount] = useState(0);
 
   function toggleStudent(uid: string) {
     setExpandedStudents((prev) => {
@@ -76,6 +77,9 @@ export default function AdminPage() {
       setExpandedStudents(uids);
       const qs = await qRes.json();
       setQuestionCount(Array.isArray(qs) ? qs.length : 0);
+      const capRes = await fetch("/api/capture-log");
+      const capData = await capRes.json().catch(() => []);
+      setCaptureCount(Array.isArray(capData) ? capData.length : 0);
     }
     load();
   }, []);
@@ -101,6 +105,12 @@ export default function AdminPage() {
           <Link href="/admin/codes" className="text-sm text-blue-600 hover:underline">코드 관리</Link>
           <Link href="/admin/lectures" className="text-sm text-blue-600 hover:underline">강의 관리</Link>
           <Link href="/admin/questions" className="text-sm text-blue-600 hover:underline">문제 관리</Link>
+          <Link href="/admin/captures" className="relative text-sm text-red-600 hover:underline flex items-center gap-1">
+            캡처 감지
+            {captureCount > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
+            )}
+          </Link>
           <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
         </div>
 
@@ -119,6 +129,12 @@ export default function AdminPage() {
           <Link href="/admin/codes" className="text-sm text-blue-600">코드 관리</Link>
           <Link href="/admin/lectures" className="text-sm text-blue-600">강의 관리</Link>
           <Link href="/admin/questions" className="text-sm text-blue-600">문제 관리</Link>
+          <Link href="/admin/captures" className="text-sm text-red-600 flex items-center gap-2">
+            캡처 감지
+            {captureCount > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
+            )}
+          </Link>
           <button onClick={logout} className="text-sm text-red-500 text-left">로그아웃</button>
         </div>
       )}

@@ -212,6 +212,8 @@ function TestQuiz({ mode }: { mode: Mode }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(MODE_TIMER[mode]);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const MAX_SAVES = 3;
 
   const submitRef = useRef<() => void>(() => {});
 
@@ -332,7 +334,29 @@ function TestQuiz({ mode }: { mode: Mode }) {
         )}
 
         <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-          <p className="text-slate-800 font-medium mb-6 leading-relaxed">{q.questionText}</p>
+          <div className="flex items-start justify-between mb-4">
+            <p className="text-slate-800 font-medium leading-relaxed flex-1 pr-3">{q.questionText}</p>
+            <button
+              onClick={() => {
+                setSavedIds((prev) => {
+                  if (prev.includes(q.id)) return prev.filter((id) => id !== q.id);
+                  if (prev.length >= MAX_SAVES) return prev;
+                  return [...prev, q.id];
+                });
+              }}
+              title={savedIds.includes(q.id) ? "저장 취소" : savedIds.length >= MAX_SAVES ? `최대 ${MAX_SAVES}개까지 저장 가능` : "문제 저장"}
+              className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border text-xs transition-colors ${
+                savedIds.includes(q.id)
+                  ? "bg-yellow-50 border-yellow-400 text-yellow-700"
+                  : savedIds.length >= MAX_SAVES
+                  ? "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed"
+                  : "bg-slate-50 border-slate-200 text-slate-500 hover:border-yellow-400 hover:text-yellow-600"
+              }`}
+            >
+              <span className="text-base">{savedIds.includes(q.id) ? "★" : "☆"}</span>
+              <span className="font-medium">{savedIds.length}/{MAX_SAVES}</span>
+            </button>
+          </div>
           <div className="space-y-3">
             {options.map(({ displayKey, originalKey, text }) => (
               <button
@@ -384,7 +408,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              className={`w-8 h-8 rounded text-xs font-medium flex-shrink-0 ${
+              className={`w-8 h-8 rounded text-xs font-medium flex-shrink-0 relative ${
                 i === current
                   ? "bg-blue-600 text-white"
                   : answers[questions[i].id]
@@ -393,9 +417,32 @@ function TestQuiz({ mode }: { mode: Mode }) {
               }`}
             >
               {i + 1}
+              {savedIds.includes(questions[i].id) && (
+                <span className="absolute -top-1 -right-1 text-[8px] text-yellow-500">★</span>
+              )}
             </button>
           ))}
         </div>
+
+        {savedIds.length > 0 && (
+          <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <p className="text-xs font-semibold text-yellow-700 mb-2">★ 저장된 문제 ({savedIds.length}/{MAX_SAVES})</p>
+            <div className="flex flex-wrap gap-2">
+              {savedIds.map((id) => {
+                const idx = questions.findIndex((q2) => q2.id === id);
+                return idx >= 0 ? (
+                  <button
+                    key={id}
+                    onClick={() => setCurrent(idx)}
+                    className="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-lg text-xs font-medium border border-yellow-300"
+                  >
+                    {idx + 1}번 문제
+                  </button>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -420,7 +467,7 @@ function TestContent() {
 export default function TestPage() {
   return (
     <>
-      <CaptureProtect />
+      <CaptureProtect page="test" />
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
         <TestContent />
       </Suspense>
