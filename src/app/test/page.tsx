@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CaptureProtect from "@/components/CaptureProtect";
+import KickedOverlay from "@/components/KickedOverlay";
 
 interface Question {
   id: string;
@@ -144,11 +145,6 @@ function TestHistory({ onBack }: { onBack: () => void }) {
 // ── 유형 선택 화면 ───────────────────────────────────────────
 function ModeSelect({ onHistory }: { onHistory: () => void }) {
   const router = useRouter();
-  const [counts, setCounts] = useState<{ p5: number; p6: number; p7: number } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/question-counts").then(r => r.json()).then(d => setCounts(d)).catch(() => {});
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -164,7 +160,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base">실전 모의고사</div>
-          <div className="text-xs text-blue-200 mt-0.5">Part 5+6+7 · 100문제 · 75분</div>
+          <div className="text-xs text-blue-200 mt-0.5">Part 5+6+7 · 75문제 · 75분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part5")}
@@ -178,14 +174,14 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 6 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">장문 빈칸 · {counts ? `${counts.p6}문제` : "지문별 연습"} · 15분</div>
+          <div className="text-xs text-slate-400 mt-0.5">장문 빈칸 · 16문제 · 15분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part7")}
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 7 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">독해 · {counts ? `${counts.p7}문제` : "지문별 연습"} · 55분</div>
+          <div className="text-xs text-slate-400 mt-0.5">2중·3중·4중 지문 · 29문제 · 55분</div>
         </button>
 
         {/* 시험 기록 버튼 */}
@@ -218,12 +214,17 @@ function TestQuiz({ mode }: { mode: Mode }) {
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(MODE_TIMER[mode]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [kickedDetected, setKickedDetected] = useState(false);
   const MAX_SAVES = 3;
 
   useEffect(() => {
     function checkSession() {
       fetch("/api/auth/me").then(r => r.json()).then(d => {
-        if (d.kicked) { router.push("/login?kicked=1"); return; }
+        if (d.kicked) {
+          setKickedDetected(true);
+          setTimeout(() => router.push("/login?kicked=1"), 2500);
+          return;
+        }
         if (!d.user) { router.push("/login"); return; }
       }).catch(() => {});
     }
@@ -341,7 +342,13 @@ function TestQuiz({ mode }: { mode: Mode }) {
     setAnswers((prev) => ({ ...prev, [questionId]: option }));
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">문제 불러오는 중...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <p className="text-slate-700 font-semibold text-lg">AI가 맞춤 문제를 생성하는 중입니다...</p>
+      <p className="text-slate-400 text-sm">최대 30초 정도 소요될 수 있습니다</p>
+    </div>
+  );
   if (error) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <p className="text-red-500">{error}</p>
@@ -363,6 +370,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <KickedOverlay visible={kickedDetected} />
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-blue-600">{MODE_LABEL[mode]}</span>
@@ -383,11 +391,26 @@ function TestQuiz({ mode }: { mode: Mode }) {
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {q.group && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-            {q.group.passageText}
-          </div>
-        )}
+        {q.group && (() => {
+          const isMulti = ["double", "triple", "quad"].includes(q.group!.passageType);
+          if (isMulti) {
+            const parts = q.group!.passageText.split(/──────────────────────/);
+            return (
+              <div className="space-y-3 mb-6">
+                {parts.map((part, idx) => (
+                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-5 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {part.trim()}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          return (
+            <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+              {q.group!.passageText}
+            </div>
+          );
+        })()}
 
         <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 relative">
           <div className="flex items-start justify-between mb-4">

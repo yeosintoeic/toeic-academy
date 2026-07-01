@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import KickedOverlay from "@/components/KickedOverlay";
 
 interface Session {
   id: string;
@@ -66,6 +67,7 @@ function DashboardContent() {
   const [history, setHistory] = useState<Session[]>([]);
   const [vocabHistory, setVocabHistory] = useState<VocabRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [kickedDetected, setKickedDetected] = useState(false);
 
   const expired = params.get("expired") === "1";
   const noAccess = params.get("noaccess");
@@ -106,7 +108,12 @@ function DashboardContent() {
         const res = await fetch("/api/auth/me");
         const data = await res.json();
         if (!res.ok || !data.user) {
-          router.push(data?.kicked ? "/login?kicked=1" : "/login");
+          if (data?.kicked) {
+            setKickedDetected(true);
+            setTimeout(() => router.push("/login?kicked=1"), 2500);
+          } else {
+            router.push("/login");
+          }
         }
       } catch { /* 네트워크 오류 무시 */ }
     }
@@ -144,6 +151,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <KickedOverlay visible={kickedDetected} />
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <h1 className="font-bold text-lg text-slate-800">여신토익</h1>
         <div className="flex items-center gap-4">

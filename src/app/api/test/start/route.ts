@@ -1,5 +1,10 @@
 import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { generatePart5, generatePart6, generatePart7 } from "@/lib/ai-generate";
+
+export const maxDuration = 120;
+
+type Mode = "full" | "part5" | "part6" | "part7";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -9,16 +14,6 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
-
-type Mode = "full" | "part5" | "part6" | "part7";
-
-type GroupWithQuestions = Awaited<ReturnType<typeof prisma.questionGroup.findMany<{
-  include: { questions: { orderBy: { id: "asc" } } }
-}>>>[number];
-
-type QWithGroup = GroupWithQuestions["questions"][number] & {
-  group?: Omit<GroupWithQuestions, "questions"> | null;
-};
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -38,54 +33,78 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const mode: Mode = ["full", "part5", "part6", "part7"].includes(body.mode) ? body.mode : "full";
 
-  const questions: QWithGroup[] = [];
+  let p5Ids: string[] = [];
+  let p6Ids: string[] = [];
+  let p7Ids: string[] = [];
+  let aiUsed = false;
 
-  // ── Part 5: 풀에서 랜덤으로 30문제 선택
-  if (mode === "full" || mode === "part5") {
-    const all5 = await prisma.question.findMany({
-      where: { part: 5, id: { startsWith: "ai_p5" } },
-    });
-    const selected5 = shuffle(all5).slice(0, 30);
-    questions.push(...selected5.map(q => ({ ...q, group: null })));
+  // AI 생성 시도, 실패 시 DB 풀로 폴백
+  try {
+    const tasks: Promise<void>[] = [];
+    if (mode === "full" || mode === "part5") {
+      tasks.push(generatePart5().then(ids => { p5Ids = ids; }));
+    }
+    if (mode === "full" || mode === "part6") {
+      tasks.push(generatePart6().then(ids => { p6Ids = ids; }));
+    }
+    if (mode === "full" || mode === "part7") {
+      tasks.push(generatePart7().then(ids => { p7Ids = ids; }));
+    }
+    await Promise.all(tasks);
+    aiUsed = true;
+  } catch (err) {
+    console.error("AI generation failed, falling back to DB pool:", err);
   }
 
-  // ── Part 6: 풀에서 랜덤으로 4그룹 선택 (16문제)
-  if (mode === "full" || mode === "part6") {
-    const allG6 = await prisma.questionGroup.findMany({
-      where: { part: 6, id: { startsWith: "ai_g6" } },
-      include: { questions: { orderBy: { id: "asc" } } },
-    });
-    const selectedG6 = shuffle(allG6).slice(0, 4);
-    for (const { questions: qs, ...meta } of selectedG6) {
-      for (const q of qs) questions.push({ ...q, group: meta });
+  // DB 풀 폴백
+  if (!aiUsed) {
+    if ((mode === "full" || mode === "part5") && p5Ids.length === 0) {
+      const all5 = await prisma.question.findMany({ where: { part: 5 } });
+      p5Ids = shuffle(all5).slice(0, 30).map(q => q.id);
+    }
+    if ((mode === "full" || mode === "part6") && p6Ids.length === 0) {
+      const allG6 = await prisma.questionGroup.findMany({
+        where: { part: 6 },
+        include: { questions: { orderBy: { id: "asc" } } },
+      });
+      const sel = shuffle(allG6).slice(0, 4);
+      for (const g of sel) p6Ids.push(...g.questions.map(q => q.id));
+    }
+    if ((mode === "full" || mode === "part7") && p7Ids.length === 0) {
+      const allG7 = await prisma.questionGroup.findMany({
+        where: { part: 7 },
+        include: { questions: { orderBy: { id: "asc" } } },
+      });
+      const sel = shuffle(allG7).slice(0, 3);
+      for (const g of sel) p7Ids.push(...g.questions.map(q => q.id));
     }
   }
 
-  // ── Part 7: 풀에서 랜덤으로 15그룹 선택 (54문제)
-  if (mode === "full" || mode === "part7") {
-    const allG7 = await prisma.questionGroup.findMany({
-      where: { part: 7, id: { startsWith: "ai_g7" } },
-      include: { questions: { orderBy: { id: "asc" } } },
-    });
-    const selectedG7 = shuffle(allG7).slice(0, 15);
-    for (const { questions: qs, ...meta } of selectedG7) {
-      for (const q of qs) questions.push({ ...q, group: meta });
-    }
-  }
+  const allIds = [...p5Ids, ...p6Ids, ...p7Ids];
 
-  if (questions.length === 0) {
+  if (allIds.length === 0) {
     return Response.json({ error: "문제가 없습니다. 관리자에게 문의하세요." }, { status: 404 });
   }
 
-  const testSession = await prisma.testSession.create({
-    data: {
-      userId: session.id,
-      mode,
-      totalQuestions: questions.length,
+  // 생성된 문제 조회 (그룹 정보 포함)
+  const questions = await prisma.question.findMany({
+    where: { id: { in: allIds } },
+    include: {
+      group: { select: { passageText: true, passageType: true } }
     },
   });
 
-  // 정답·해설 필드를 클라이언트에 노출하지 않음
-  const safeQuestions = questions.map(({ answer: _a, explanation: _e, ...rest }) => rest);
+  // Part 순서대로 정렬 후 그룹 내 순서 유지
+  const sorted = [...questions].sort((a, b) => {
+    if (a.part !== b.part) return a.part - b.part;
+    if (a.groupId && b.groupId && a.groupId !== b.groupId) return a.groupId.localeCompare(b.groupId);
+    return a.id.localeCompare(b.id);
+  });
+
+  const testSession = await prisma.testSession.create({
+    data: { userId: session.id, mode, totalQuestions: sorted.length },
+  });
+
+  const safeQuestions = sorted.map(({ answer: _a, explanation: _e, ...rest }) => rest);
   return Response.json({ sessionId: testSession.id, questions: safeQuestions, mode });
 }

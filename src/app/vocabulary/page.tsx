@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { vocab, VocabWord } from "@/lib/vocab";
 import CaptureProtect from "@/components/CaptureProtect";
+import KickedOverlay from "@/components/KickedOverlay";
 
 type Mode = "select" | "practice" | "test" | "history";
 type Direction = "ko-en" | "en-ko";
@@ -450,12 +451,18 @@ export default function VocabularyPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("select");
   const [authChecked, setAuthChecked] = useState(false);
+  const [kickedDetected, setKickedDetected] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me").then(async (r) => {
       const data = await r.json();
       if (!r.ok || !data.user) {
-        router.push(data?.kicked ? "/login?kicked=1" : "/login");
+        if (data?.kicked) {
+          setKickedDetected(true);
+          setTimeout(() => router.push("/login?kicked=1"), 2500);
+        } else {
+          router.push("/login");
+        }
         return;
       }
       const { user } = data;
@@ -475,7 +482,12 @@ export default function VocabularyPage() {
         const res = await fetch("/api/auth/me");
         const data = await res.json();
         if (!res.ok || !data.user) {
-          router.push(data?.kicked ? "/login?kicked=1" : "/login");
+          if (data?.kicked) {
+            setKickedDetected(true);
+            setTimeout(() => router.push("/login?kicked=1"), 2500);
+          } else {
+            router.push("/login");
+          }
         }
       } catch { /* 네트워크 오류 무시 */ }
     }
@@ -494,17 +506,19 @@ export default function VocabularyPage() {
   if (!authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400">
+        <KickedOverlay visible={kickedDetected} />
         로딩 중...
       </div>
     );
   }
 
-  if (mode === "practice") return <PracticeMode onBack={() => setMode("select")} />;
-  if (mode === "test") return <TestMode onBack={() => setMode("select")} />;
-  if (mode === "history") return <HistoryMode onBack={() => setMode("select")} />;
+  if (mode === "practice") return <><KickedOverlay visible={kickedDetected} /><PracticeMode onBack={() => setMode("select")} /></>;
+  if (mode === "test") return <><KickedOverlay visible={kickedDetected} /><TestMode onBack={() => setMode("select")} /></>;
+  if (mode === "history") return <><KickedOverlay visible={kickedDetected} /><HistoryMode onBack={() => setMode("select")} /></>;
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <KickedOverlay visible={kickedDetected} />
       <CaptureProtect page="vocabulary" />
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center gap-4">
         <button
