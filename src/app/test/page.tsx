@@ -232,6 +232,37 @@ function TestQuiz({ mode }: { mode: Mode }) {
     return () => clearInterval(interval);
   }, [router]);
 
+  // DB에서 저장된 문제 목록 불러오기
+  useEffect(() => {
+    fetch("/api/saved-questions")
+      .then(r => r.json())
+      .then(d => {
+        if (d.saved) setSavedIds(d.saved.map((s: { questionId: string }) => s.questionId));
+      })
+      .catch(() => {});
+  }, []);
+
+  function toggleSave(questionId: string, questionText: string) {
+    const isSaved = savedIds.includes(questionId);
+    if (!isSaved && savedIds.length >= MAX_SAVES) return;
+
+    if (isSaved) {
+      setSavedIds(prev => prev.filter(id => id !== questionId));
+      fetch("/api/saved-questions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId }),
+      }).catch(() => {});
+    } else {
+      setSavedIds(prev => [...prev, questionId]);
+      fetch("/api/saved-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, questionText, sessionId }),
+      }).catch(() => {});
+    }
+  }
+
   const submitRef = useRef<() => void>(() => {});
 
   async function handleSubmit() {
@@ -354,13 +385,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
           <div className="flex items-start justify-between mb-4">
             <p className="text-slate-800 font-medium leading-relaxed flex-1 pr-3">{q.questionText}</p>
             <button
-              onClick={() => {
-                setSavedIds((prev) => {
-                  if (prev.includes(q.id)) return prev.filter((id) => id !== q.id);
-                  if (prev.length >= MAX_SAVES) return prev;
-                  return [...prev, q.id];
-                });
-              }}
+              onClick={() => toggleSave(q.id, q.questionText)}
               title={savedIds.includes(q.id) ? "저장 취소" : savedIds.length >= MAX_SAVES ? `최대 ${MAX_SAVES}개까지 저장 가능` : "문제 저장"}
               className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border text-xs transition-colors ${
                 savedIds.includes(q.id)

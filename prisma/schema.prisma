@@ -24,8 +24,9 @@ model User {
   marketingConsent Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
-  sessions     TestSession[]
-  captureLogs  CaptureLog[]
+  sessions       TestSession[]
+  captureLogs    CaptureLog[]
+  savedQuestions SavedQuestion[]
 }
 
 model QuestionGroup {
@@ -104,6 +105,19 @@ model CaptureLog {
   page      String
   createdAt DateTime @default(now())
 
+  @@index([userId])
+}
+
+model SavedQuestion {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId    String
+  questionText  String   @default("")
+  sessionId     String?
+  savedAt       DateTime @default(now())
+
+  @@unique([userId, questionId])
   @@index([userId])
 }
 

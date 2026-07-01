@@ -112,6 +112,7 @@ export default function AdminPage() {
               <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
             )}
           </Link>
+          <Link href="/admin/saved" className="text-sm text-yellow-600 hover:underline">저장 문제</Link>
           <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
         </div>
 
@@ -136,6 +137,7 @@ export default function AdminPage() {
               <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
             )}
           </Link>
+          <Link href="/admin/saved" className="text-sm text-yellow-600">저장 문제</Link>
           <button onClick={logout} className="text-sm text-red-500 text-left">로그아웃</button>
         </div>
       )}
