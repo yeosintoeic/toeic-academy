@@ -17,6 +17,7 @@ export async function GET() {
       plan: true,
       planExpiresAt: true,
       createdAt: true,
+      lastLoginAt: true,
       sessions: {
         where: { completedAt: { not: null } },
         select: { totalScore: true, totalQuestions: true, completedAt: true },

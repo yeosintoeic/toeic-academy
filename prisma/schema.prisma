@@ -18,6 +18,7 @@ model User {
   loginAttempts    Int       @default(0)
   mustChangePw     Boolean   @default(false)
   sessionNonce     String?
+  lastLoginAt      DateTime?
   phone            String?
   privacyConsent   Boolean   @default(false)
   marketingConsent Boolean   @default(false)

@@ -16,6 +16,7 @@ interface Student {
   plan: string;
   planExpiresAt: string | null;
   createdAt: string;
+  lastLoginAt: string | null;
   sessions: { totalScore: number; totalQuestions: number; completedAt: string }[];
 }
 
@@ -40,7 +41,7 @@ export default function AdminPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
-  const [tab, setTab] = useState<"students" | "scores">("students");
+  const [tab, setTab] = useState<"students" | "scores" | "inactive">("students");
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -169,6 +170,23 @@ export default function AdminPage() {
             className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "scores" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
           >
             성적 현황
+          </button>
+          <button
+            onClick={() => setTab("inactive")}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium relative ${tab === "inactive" ? "bg-orange-500 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+          >
+            미접속 관리
+            {students.filter((s) => {
+              const d = s.lastLoginAt ? (Date.now() - new Date(s.lastLoginAt).getTime()) / 86400000 : Infinity;
+              return d >= 90;
+            }).length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-orange-500 text-white rounded-full">
+                {students.filter((s) => {
+                  const d = s.lastLoginAt ? (Date.now() - new Date(s.lastLoginAt).getTime()) / 86400000 : Infinity;
+                  return d >= 90;
+                }).length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -347,7 +365,139 @@ export default function AdminPage() {
             })}
           </div>
         )}
+        {/* 미접속 수강생 관리 */}
+        {tab === "inactive" && (
+          <InactiveStudents students={students} onDeleted={() => {
+            fetch("/api/admin/students").then(r => r.json()).then(d => setStudents(Array.isArray(d) ? d : []));
+          }} />
+        )}
       </main>
+    </div>
+  );
+}
+
+function InactiveStudents({ students, onDeleted }: { students: Student[]; onDeleted: () => void }) {
+  const DAYS = 90;
+  const now = Date.now();
+
+  const inactive = students
+    .filter((s) => {
+      const ms = s.lastLoginAt ? now - new Date(s.lastLoginAt).getTime() : Infinity;
+      return ms / 86400000 >= DAYS;
+    })
+    .sort((a, b) => {
+      const da = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+      const db = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+      return da - db;
+    });
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`${name} 계정을 삭제하시겠습니까? 모든 응시 기록도 함께 삭제됩니다.`)) return;
+    const sessions = await fetch(`/api/admin/students/${id}`).then(r => r.json()).then(d => d.sessions ?? []);
+    await fetch(`/api/admin/students/${id}`, { method: "DELETE" });
+    onDeleted();
+  }
+
+  async function handleDeleteAll() {
+    if (!confirm(`미접속 수강생 ${inactive.length}명을 모두 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
+    for (const s of inactive) {
+      await fetch(`/api/admin/students/${s.id}`, { method: "DELETE" });
+    }
+    onDeleted();
+  }
+
+  if (inactive.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 px-6 py-16 text-center text-slate-400">
+        90일 이상 미접속 수강생이 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200">
+      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">90일 이상 미접속 수강생 <span className="text-orange-500">{inactive.length}명</span></p>
+          <p className="text-xs text-slate-400 mt-0.5">마지막 로그인이 90일 이상 지난 계정입니다.</p>
+        </div>
+        <button
+          onClick={handleDeleteAll}
+          className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200"
+        >
+          전체 삭제
+        </button>
+      </div>
+
+      {/* 모바일 카드 */}
+      <div className="sm:hidden divide-y divide-slate-100">
+        {inactive.map((s) => {
+          const daysSince = s.lastLoginAt
+            ? Math.floor((now - new Date(s.lastLoginAt).getTime()) / 86400000)
+            : null;
+          return (
+            <div key={s.id} className="px-4 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
+                <p className="text-xs text-slate-400 truncate">{s.email}</p>
+                <p className="text-xs text-orange-500 mt-0.5">
+                  {daysSince !== null ? `${daysSince}일 전 접속` : "접속 기록 없음"}
+                </p>
+              </div>
+              <button
+                onClick={() => handleDelete(s.id, s.name)}
+                className="flex-shrink-0 text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200"
+              >
+                삭제
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* PC 테이블 */}
+      <table className="hidden sm:table w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+            <th className="px-4 py-3">이름</th>
+            <th className="px-4 py-3">이메일</th>
+            <th className="px-4 py-3">플랜</th>
+            <th className="px-4 py-3">가입일</th>
+            <th className="px-4 py-3">마지막 접속</th>
+            <th className="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {inactive.map((s) => {
+            const daysSince = s.lastLoginAt
+              ? Math.floor((now - new Date(s.lastLoginAt).getTime()) / 86400000)
+              : null;
+            return (
+              <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50">
+                <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
+                <td className="px-4 py-3 text-slate-500">{s.email}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">{PLAN_LABEL[s.plan] ?? s.plan}</span>
+                </td>
+                <td className="px-4 py-3 text-slate-400 text-xs">{new Date(s.createdAt).toLocaleDateString("ko-KR")}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs text-orange-500 font-medium">
+                    {daysSince !== null ? `${daysSince}일 전` : "없음"}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => handleDelete(s.id, s.name)}
+                    className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200"
+                  >
+                    삭제
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

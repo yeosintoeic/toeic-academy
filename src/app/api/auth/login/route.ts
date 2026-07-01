@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const sessionNonce = crypto.randomUUID();
   await prisma.user.update({
     where: { id: user.id },
-    data: { loginAttempts: 0, sessionNonce },
+    data: { loginAttempts: 0, sessionNonce, lastLoginAt: new Date() },
   });
 
   const token = await signToken({ id: user.id, role: user.role, name: user.name, sessionNonce });

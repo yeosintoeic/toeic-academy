@@ -49,7 +49,7 @@ export default function AdminCodesPage() {
     setSaving(true);
     setMessage("");
 
-    const count = Math.min(Math.max(1, bulk), 50);
+    const count = Math.min(Math.max(1, bulk), 100);
 
     if (count === 1) {
       const res = await fetch("/api/admin/codes", {
@@ -69,19 +69,22 @@ export default function AdminCodesPage() {
       return;
     }
 
-    // 여러 개 생성
-    let success = 0;
-    for (let i = 0; i < count; i++) {
-      const code = form.code ? `${form.code}-${i + 1}` : randomCode();
-      const res = await fetch("/api/admin/codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, code }),
-      });
-      if (res.ok) success++;
-    }
+    // 여러 개 → 서버에서 한번에 생성 (빠름)
+    const res = await fetch("/api/admin/codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bulk: true,
+        count,
+        plan: form.plan,
+        durationDays: form.durationDays,
+        label: form.label,
+        prefix: form.code || "",
+      }),
+    });
+    const data = await res.json();
     setSaving(false);
-    setMessage(`${success}개 코드가 생성되었습니다.`);
+    setMessage(res.ok ? `${data.created}개 코드가 생성되었습니다.` : "오류가 발생했습니다.");
     setForm((f) => ({ ...f, code: "" }));
     load();
   }
@@ -157,9 +160,9 @@ export default function AdminCodesPage() {
                 <input
                   type="number"
                   value={bulk}
-                  onChange={(e) => setBulk(Math.min(Number(e.target.value), 50))}
+                  onChange={(e) => setBulk(Math.min(Number(e.target.value), 100))}
                   min={1}
-                  max={50}
+                  max={100}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                 />
               </div>
