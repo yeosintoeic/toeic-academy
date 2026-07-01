@@ -22,7 +22,8 @@ const PLAN_LABEL: Record<string, string> = {
 };
 
 function randomCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
 export default function AdminCodesPage() {

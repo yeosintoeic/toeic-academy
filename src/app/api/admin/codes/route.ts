@@ -3,7 +3,8 @@ import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 function randomCode() {
-  return Math.random().toString(36).slice(2, 10).toUpperCase();
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
 export async function GET() {
