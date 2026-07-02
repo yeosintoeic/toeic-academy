@@ -93,12 +93,12 @@ export default function AdminPage() {
       const meRes = await fetch("/api/auth/me");
       const meData = await meRes.json();
       const role = meData.user?.role;
-      if (!role || (role !== "ADMIN" && role !== "VIEWER")) {
+      if (!role || (role !== "ADMIN" && role !== "VIEWER" && role !== "MANAGER")) {
         router.push("/dashboard");
         return;
       }
       setUserRole(role);
-      if (role === "VIEWER") {
+      if (role === "VIEWER" || role === "MANAGER") {
         setTab("scores");
         const scoreRes = await fetch("/api/admin/scores");
         const scoreData = await scoreRes.json();
@@ -365,8 +365,73 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* 성적 현황 - 매니저 축약 뷰 */}
+        {tab === "scores" && userRole === "MANAGER" && (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100">
+              <p className="text-sm font-semibold text-slate-800">수강생 성적 현황</p>
+              <p className="text-xs text-slate-400 mt-0.5">총 {Object.keys(scoresByStudent).length}명</p>
+            </div>
+            {Object.keys(scoresByStudent).length === 0 ? (
+              <div className="px-4 py-12 text-center text-slate-400 text-sm">응시 기록이 없습니다.</div>
+            ) : (
+              <>
+                <table className="hidden sm:table w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-400 bg-slate-50 border-b border-slate-100">
+                      <th className="px-5 py-3">이름</th>
+                      <th className="px-5 py-3">응시 횟수</th>
+                      <th className="px-5 py-3">최근 응시일</th>
+                      <th className="px-5 py-3">최근 점수</th>
+                      <th className="px-5 py-3">최고 정답률</th>
+                      <th className="px-5 py-3">평균 정답률</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.values(scoresByStudent).map(({ user, sessions }) => {
+                      const latest = sessions[0];
+                      const best = Math.max(...sessions.map(s => s.totalQuestions > 0 ? Math.round(s.totalScore / s.totalQuestions * 100) : 0));
+                      const avg = Math.round(sessions.reduce((a, s) => a + (s.totalQuestions > 0 ? s.totalScore / s.totalQuestions * 100 : 0), 0) / sessions.length);
+                      return (
+                        <tr key={user.id} className="border-b border-slate-50">
+                          <td className="px-5 py-3 font-medium text-slate-800">{user.name}</td>
+                          <td className="px-5 py-3 text-slate-500">{sessions.length}회</td>
+                          <td className="px-5 py-3 text-slate-400 text-xs">{latest ? new Date(latest.completedAt).toLocaleDateString("ko-KR") : "-"}</td>
+                          <td className="px-5 py-3 font-semibold text-blue-600">{latest ? `${latest.totalScore}/${latest.totalQuestions}` : "-"}</td>
+                          <td className="px-5 py-3 text-slate-700">{best}%</td>
+                          <td className="px-5 py-3 text-slate-500">{avg}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div className="sm:hidden divide-y divide-slate-100">
+                  {Object.values(scoresByStudent).map(({ user, sessions }) => {
+                    const latest = sessions[0];
+                    const best = Math.max(...sessions.map(s => s.totalQuestions > 0 ? Math.round(s.totalScore / s.totalQuestions * 100) : 0));
+                    const avg = Math.round(sessions.reduce((a, s) => a + (s.totalQuestions > 0 ? s.totalScore / s.totalQuestions * 100 : 0), 0) / sessions.length);
+                    return (
+                      <div key={user.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-slate-800">{user.name}</span>
+                          <span className="text-sm font-bold text-blue-600">{latest ? `${latest.totalScore}/${latest.totalQuestions}` : "-"}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-400">
+                          <span>{sessions.length}회 응시</span>
+                          <span>평균 <span className="text-slate-600 font-medium">{avg}%</span></span>
+                          <span>최고 <span className="text-blue-600 font-medium">{best}%</span></span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* 성적 현황 */}
-        {tab === "scores" && (
+        {tab === "scores" && userRole !== "MANAGER" && (
           <div className="space-y-3">
             {Object.keys(scoresByStudent).length === 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 px-6 py-12 text-center text-slate-400">응시 기록이 없습니다.</div>

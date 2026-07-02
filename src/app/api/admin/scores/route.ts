@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   const session = await getSession();
-  if (!session || (session.role !== "ADMIN" && session.role !== "VIEWER")) {
+  if (!session || (session.role !== "ADMIN" && session.role !== "VIEWER" && session.role !== "MANAGER")) {
     return Response.json({ error: "권한 없음" }, { status: 403 });
   }
 

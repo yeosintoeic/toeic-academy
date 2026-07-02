@@ -145,12 +145,13 @@ function DashboardContent() {
 
   const isAdmin = user?.role === "ADMIN";
   const isViewer = user?.role === "VIEWER";
+  const isManager = user?.role === "MANAGER";
   const days = daysLeft(user?.planExpiresAt ?? null);
-  const isExpired = !isAdmin && !isViewer && (!user?.planExpiresAt || days === 0);
+  const isExpired = !isAdmin && !isViewer && !isManager && (!user?.planExpiresAt || days === 0);
   const plan = user?.plan ?? "NONE";
-  const canTest = isAdmin || isViewer || (!isExpired && ["TEST", "FULL", "TEST_VOCAB", "ALL"].includes(plan));
-  const canLecture = !isViewer && (isAdmin || (!isExpired && ["LECTURE", "FULL", "ALL"].includes(plan)));
-  const canVocab = isAdmin || isViewer || (!isExpired && ["VOCAB", "TEST_VOCAB", "ALL"].includes(plan));
+  const canTest = isAdmin || isViewer || isManager || (!isExpired && ["TEST", "FULL", "TEST_VOCAB", "ALL"].includes(plan));
+  const canLecture = !isViewer && !isManager && (isAdmin || (!isExpired && ["LECTURE", "FULL", "ALL"].includes(plan)));
+  const canVocab = isAdmin || isViewer || isManager || (!isExpired && ["VOCAB", "TEST_VOCAB", "ALL"].includes(plan));
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -158,7 +159,7 @@ function DashboardContent() {
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="font-bold text-lg text-slate-800">여신토익</h1>
-          {(isAdmin || isViewer) && (
+          {(isAdmin || isViewer || isManager) && (
             <a href="/admin" className="text-xs px-2.5 py-1 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors font-medium">
               관리자
             </a>
