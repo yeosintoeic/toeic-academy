@@ -546,15 +546,9 @@ function TestContent() {
 }
 
 function TestPageInner() {
-  const [userEmail, setUserEmail] = useState("");
-  useEffect(() => {
-    fetch("/api/auth/me").then(r => r.json()).then(d => {
-      if (d.user?.email) setUserEmail(d.user.email);
-    }).catch(() => {});
-  }, []);
   return (
     <>
-      <CaptureProtect page="test" userEmail={userEmail} />
+      <CaptureProtect page="test" />
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩 중...</div>}>
         <TestContent />
       </Suspense>

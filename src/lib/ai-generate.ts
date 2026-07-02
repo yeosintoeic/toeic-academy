@@ -35,8 +35,38 @@ function isValidQuestion(q: RawQuestion): boolean {
   return opts.length === 4 && new Set(opts).size === 4;
 }
 
+// AI 생성 문제 정리: 답변 기록이 없는 gen_ 문제 삭제 (DB 무한 누적 방지)
+async function cleanupOldAIQuestions() {
+  // 실제로 사용된(TestAnswer가 있는) gen_ 문제 ID 목록
+  const usedAnswers = await prisma.testAnswer.findMany({
+    where: { questionId: { startsWith: "gen_" } },
+    select: { questionId: true },
+  });
+  const usedIds = new Set(usedAnswers.map(a => a.questionId));
+
+  // 사용되지 않은 gen_ 문제 삭제
+  const allGenQuestions = await prisma.question.findMany({
+    where: { id: { startsWith: "gen_" } },
+    select: { id: true, groupId: true },
+  });
+  const unusedIds = allGenQuestions.filter(q => !usedIds.has(q.id)).map(q => q.id);
+  if (unusedIds.length > 0) {
+    await prisma.question.deleteMany({ where: { id: { in: unusedIds } } });
+  }
+
+  // 문제가 모두 삭제된 gen_ 그룹 정리
+  const emptyGroups = await prisma.questionGroup.findMany({
+    where: { id: { startsWith: "gen_" }, questions: { none: {} } },
+    select: { id: true },
+  });
+  if (emptyGroups.length > 0) {
+    await prisma.questionGroup.deleteMany({ where: { id: { in: emptyGroups.map(g => g.id) } } });
+  }
+}
+
 // Part 5: 30 standalone grammar/vocab questions
 export async function generatePart5(): Promise<string[]> {
+  void cleanupOldAIQuestions().catch(() => {});
   const samples = await prisma.question.findMany({ where: { part: 5 }, take: 12 });
   const examples = samples.slice(0, 6).map(q =>
     `문제: ${q.questionText}\n(A)${q.optionA}  (B)${q.optionB}  (C)${q.optionC}  (D)${q.optionD}\n정답: ${q.answer}\n해설: ${q.explanation}`

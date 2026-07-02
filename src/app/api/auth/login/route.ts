@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     data: { loginAttempts: 0, sessionNonce, lastLoginAt: new Date() },
   });
 
-  const token = await signToken({ id: user.id, role: user.role, name: user.name, sessionNonce });
+  const token = await signToken({ id: user.id, role: user.role, name: user.name, sessionNonce }, rememberMe ? "30d" : "7d");
   const cookieStore = await cookies();
   cookieStore.set("token", token, {
     httpOnly: true,

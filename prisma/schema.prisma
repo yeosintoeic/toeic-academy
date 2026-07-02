@@ -116,6 +116,7 @@ model SavedQuestion {
   questionText  String   @default("")
   sessionId     String?
   savedAt       DateTime @default(now())
+  isActive      Boolean  @default(true)
 
   @@unique([userId, questionId])
   @@index([userId])

@@ -6,10 +6,13 @@ const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) throw new Error("JWT_SECRET 환경 변수가 설정되지 않았습니다.");
 const secret = new TextEncoder().encode(jwtSecret);
 
-export async function signToken(payload: { id: string; role: string; name: string; sessionNonce: string }) {
+export async function signToken(
+  payload: { id: string; role: string; name: string; sessionNonce: string },
+  expiresIn: "7d" | "30d" = "7d"
+) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresIn)
     .sign(secret);
 }
 
