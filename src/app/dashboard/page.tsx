@@ -155,7 +155,14 @@ function DashboardContent() {
     <div className="min-h-screen bg-slate-50">
       <KickedOverlay visible={kickedDetected} />
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="font-bold text-lg text-slate-800">여신토익</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-bold text-lg text-slate-800">여신토익</h1>
+          {isAdmin && (
+            <a href="/admin" className="text-xs px-2.5 py-1 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors font-medium">
+              관리자
+            </a>
+          )}
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-slate-600">{user?.name}님</span>
           <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
