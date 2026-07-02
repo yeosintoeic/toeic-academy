@@ -2,23 +2,25 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) throw new Error("JWT_SECRET 환경 변수가 설정되지 않았습니다.");
-const secret = new TextEncoder().encode(jwtSecret);
+function getSecret() {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error("JWT_SECRET 환경 변수가 설정되지 않았습니다.");
+  return new TextEncoder().encode(s);
+}
 
 export async function signToken(
   payload: { id: string; role: string; name: string; sessionNonce: string },
   expiresIn: "7d" | "30d" = "7d"
 ) {
-  return await new SignJWT(payload)
+  return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime(expiresIn)
-    .sign(secret);
+    .sign(getSecret());
 }
 
 export async function verifyToken(token: string) {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as { id: string; role: string; name: string; sessionNonce?: string };
   } catch {
     return null;
