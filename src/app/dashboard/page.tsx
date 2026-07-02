@@ -68,6 +68,7 @@ function DashboardContent() {
   const [vocabHistory, setVocabHistory] = useState<VocabRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [kickedDetected, setKickedDetected] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState("");
   const [inquirySending, setInquirySending] = useState(false);
@@ -347,10 +348,14 @@ function DashboardContent() {
 
           return (
             <div className="bg-white rounded-xl border border-slate-200">
-              <div className="px-6 py-4 border-b border-slate-100">
-                <h2 className="font-semibold text-slate-800">응시 기록</h2>
-              </div>
-              {all.length === 0 ? (
+              <button type="button" onClick={() => setHistoryOpen((v) => !v)} className="w-full flex items-center justify-between px-6 py-4 border-b border-slate-100 hover:bg-slate-50 text-left">
+                <div>
+                  <h2 className="font-semibold text-slate-800">응시 기록</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">{all.length}회</p>
+                </div>
+                <span className="text-slate-400 text-lg">{historyOpen ? "▲" : "▼"}</span>
+              </button>
+              {historyOpen && (all.length === 0 ? (
                 <div className="px-6 py-12 text-center text-slate-400">아직 응시 기록이 없습니다.</div>
               ) : (
                 <table className="w-full">
@@ -408,7 +413,7 @@ function DashboardContent() {
                     })}
                   </tbody>
                 </table>
-              )}
+              ))}
             </div>
           );
         })()}
