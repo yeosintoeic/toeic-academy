@@ -22,6 +22,7 @@ interface Student {
   phone: string | null;
   plan: string;
   planExpiresAt: string | null;
+  role: string;
   privacyConsent: boolean;
   marketingConsent: boolean;
   createdAt: string;
@@ -45,7 +46,10 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editPlan, setEditPlan] = useState("");
   const [editExpiry, setEditExpiry] = useState("");
+  const [editRole, setEditRole] = useState("");
   const [saving, setSaving] = useState(false);
+  const [roleSaving, setRoleSaving] = useState(false);
+  const [roleMsg, setRoleMsg] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -59,6 +63,7 @@ export default function StudentDetailPage() {
       .then((data) => {
         setStudent(data);
         setEditPlan(data.plan ?? "NONE");
+        setEditRole(data.role ?? "STUDENT");
         setEditExpiry(data.planExpiresAt ? new Date(data.planExpiresAt).toISOString().slice(0, 10) : "");
         setLoading(false);
       });
@@ -112,6 +117,23 @@ export default function StudentDetailPage() {
     } else {
       const data = await res.json();
       setPwMsg(data.error || "오류가 발생했습니다.");
+    }
+  }
+
+  async function handleSaveRole() {
+    setRoleSaving(true);
+    setRoleMsg("");
+    const res = await fetch(`/api/admin/students/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: editRole }),
+    });
+    setRoleSaving(false);
+    if (res.ok) {
+      setRoleMsg("역할이 변경되었습니다.");
+      setStudent((s) => s ? { ...s, role: editRole } : s);
+    } else {
+      setRoleMsg("오류가 발생했습니다.");
     }
   }
 
@@ -186,6 +208,33 @@ export default function StudentDetailPage() {
                 {deleting ? "삭제 중..." : "계정 삭제"}
               </button>
             </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-5">
+            <p className="text-sm font-semibold text-slate-700 mb-3">역할 변경</p>
+            <div className="flex gap-3 items-end flex-wrap">
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">역할</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="STUDENT">수강생</option>
+                  <option value="MANAGER">매니저</option>
+                  <option value="VIEWER">성적 열람자</option>
+                  <option value="ADMIN">관리자</option>
+                </select>
+              </div>
+              <button
+                onClick={handleSaveRole}
+                disabled={roleSaving}
+                className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {roleSaving ? "저장 중..." : "역할 저장"}
+              </button>
+            </div>
+            {roleMsg && <p className={`text-xs mt-2 ${roleMsg.includes("오류") ? "text-red-500" : "text-green-600"}`}>{roleMsg}</p>}
           </div>
 
           <div className="border-t border-slate-100 pt-5">

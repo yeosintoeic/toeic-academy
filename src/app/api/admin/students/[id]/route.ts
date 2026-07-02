@@ -23,6 +23,7 @@ export async function GET(
       phone: true,
       plan: true,
       planExpiresAt: true,
+      role: true,
       privacyConsent: true,
       marketingConsent: true,
       createdAt: true,
@@ -57,7 +58,7 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const { plan, planExpiresAt, newPassword, resetPassword } = await req.json();
+  const { plan, planExpiresAt, newPassword, resetPassword, role } = await req.json();
 
   // 비밀번호 초기화 (임시 비밀번호 12345678 + 다음 로그인 시 변경 강제)
   if (resetPassword) {
@@ -74,6 +75,16 @@ export async function PUT(
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({ where: { id }, data: { password: hashed, mustChangePw: true } });
     return Response.json({ success: true, changed: "password" });
+  }
+
+  // 역할 변경
+  if (role) {
+    const VALID_ROLES = ["STUDENT", "MANAGER", "VIEWER", "ADMIN"];
+    if (!VALID_ROLES.includes(role)) {
+      return Response.json({ error: "유효하지 않은 역할입니다." }, { status: 400 });
+    }
+    await prisma.user.update({ where: { id }, data: { role } });
+    return Response.json({ success: true, role });
   }
 
   const VALID_PLANS = ["NONE", "TEST", "LECTURE", "VOCAB", "FULL", "TEST_VOCAB", "ALL"];
