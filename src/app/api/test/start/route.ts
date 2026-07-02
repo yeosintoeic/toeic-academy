@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const setNum = mode === "homework1" ? 1 : 2;
     const hwQuestions = await prisma.question.findMany({
       where: { part: 5, homeworkSet: setNum },
-      orderBy: { id: "asc" },
+      orderBy: { homeworkOrder: "asc" },
     });
 
     if (hwQuestions.length === 0) {

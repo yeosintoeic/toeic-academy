@@ -47,10 +47,11 @@ model Question {
   answer       String
   explanation  String         @default("")
   category     String         @default("")
-  groupId      String?
-  group        QuestionGroup? @relation(fields: [groupId], references: [id])
-  homeworkSet  Int?
-  answers      TestAnswer[]
+  groupId       String?
+  group         QuestionGroup? @relation(fields: [groupId], references: [id])
+  homeworkSet   Int?
+  homeworkOrder Int?
+  answers       TestAnswer[]
 }
 
 model TestSession {

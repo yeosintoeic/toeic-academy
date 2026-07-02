@@ -46,10 +46,11 @@ export async function POST() {
   }
 
   await prisma.question.createMany({
-    data: HOMEWORK1_QUESTIONS.map((q) => ({
+    data: HOMEWORK1_QUESTIONS.map((q, i) => ({
       part: 5,
       category: "homework",
       homeworkSet: 1,
+      homeworkOrder: i + 1,
       ...q,
     })),
   });
