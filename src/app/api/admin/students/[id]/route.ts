@@ -57,15 +57,22 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const { plan, planExpiresAt, newPassword } = await req.json();
+  const { plan, planExpiresAt, newPassword, resetPassword } = await req.json();
 
-  // 비밀번호 변경
+  // 비밀번호 초기화 (임시 비밀번호 12345678 + 다음 로그인 시 변경 강제)
+  if (resetPassword) {
+    const hashed = await bcrypt.hash("12345678", 10);
+    await prisma.user.update({ where: { id }, data: { password: hashed, mustChangePw: true } });
+    return Response.json({ success: true, changed: "reset" });
+  }
+
+  // 비밀번호 직접 변경
   if (newPassword) {
     if (typeof newPassword !== "string" || newPassword.length < 8) {
       return Response.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
     }
     const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({ where: { id }, data: { password: hashed } });
+    await prisma.user.update({ where: { id }, data: { password: hashed, mustChangePw: true } });
     return Response.json({ success: true, changed: "password" });
   }
 

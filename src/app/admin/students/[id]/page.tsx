@@ -51,6 +51,7 @@ export default function StudentDetailPage() {
   const [newPassword, setNewPassword] = useState("");
   const [pwMsg, setPwMsg] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/students/${id}`)
@@ -75,6 +76,23 @@ export default function StudentDetailPage() {
     }
   }
 
+  async function handleResetPassword() {
+    if (!confirm(`${student?.name}의 비밀번호를 12345678로 초기화하시겠습니까?\n학생이 다음 로그인 시 새 비밀번호를 설정해야 합니다.`)) return;
+    setResetting(true);
+    setPwMsg("");
+    const res = await fetch(`/api/admin/students/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resetPassword: true }),
+    });
+    setResetting(false);
+    if (res.ok) {
+      setPwMsg("임시 비밀번호(12345678)로 초기화되었습니다. 학생이 로그인하면 새 비밀번호 설정 화면이 뜹니다.");
+    } else {
+      setPwMsg("오류가 발생했습니다.");
+    }
+  }
+
   async function handleChangePassword() {
     if (!newPassword || newPassword.length < 8) {
       setPwMsg("비밀번호는 8자 이상이어야 합니다.");
@@ -89,7 +107,7 @@ export default function StudentDetailPage() {
     });
     setPwSaving(false);
     if (res.ok) {
-      setPwMsg("비밀번호가 변경되었습니다.");
+      setPwMsg("비밀번호가 변경되었습니다. 학생이 로그인하면 새 비밀번호 설정 화면이 뜹니다.");
       setNewPassword("");
     } else {
       const data = await res.json();
@@ -209,12 +227,29 @@ export default function StudentDetailPage() {
             {msg && <p className={`text-xs mt-2 ${msg.includes("오류") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
           </div>
 
-          {/* 비밀번호 변경 */}
+          {/* 비밀번호 관리 */}
           <div className="border-t border-slate-100 pt-5">
-            <p className="text-sm font-semibold text-slate-700 mb-3">비밀번호 변경</p>
+            <p className="text-sm font-semibold text-slate-700 mb-3">비밀번호 관리</p>
+
+            {/* 초기화 버튼 */}
+            <div className="flex items-center gap-3 mb-4 p-3 bg-orange-50 rounded-lg border border-orange-100">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-orange-800">비밀번호 초기화</p>
+                <p className="text-xs text-orange-600 mt-0.5">임시 비밀번호(12345678)로 초기화 → 학생이 로그인하면 새 비밀번호 설정 화면으로 이동</p>
+              </div>
+              <button
+                onClick={handleResetPassword}
+                disabled={resetting}
+                className="flex-shrink-0 px-4 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 disabled:opacity-50 font-medium"
+              >
+                {resetting ? "초기화 중..." : "초기화"}
+              </button>
+            </div>
+
+            {/* 직접 지정 */}
             <div className="flex gap-3 flex-wrap items-end">
               <div>
-                <label className="block text-xs text-slate-500 mb-1">새 비밀번호 (8자 이상)</label>
+                <label className="block text-xs text-slate-500 mb-1">직접 지정 (8자 이상)</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -231,7 +266,7 @@ export default function StudentDetailPage() {
                 {pwSaving ? "변경 중..." : "변경"}
               </button>
             </div>
-            {pwMsg && <p className={`text-xs mt-2 ${pwMsg.includes("오류") || pwMsg.includes("자") ? "text-red-500" : "text-green-600"}`}>{pwMsg}</p>}
+            {pwMsg && <p className={`text-xs mt-2 ${pwMsg.includes("오류") ? "text-red-500" : "text-green-600"}`}>{pwMsg}</p>}
           </div>
         </div>
 
