@@ -30,7 +30,7 @@ export async function proxy(req: NextRequest) {
           new URL(payload.role === "ADMIN" ? "/admin" : "/dashboard", req.url)
         );
       }
-      if (isAdmin && payload.role !== "ADMIN") {
+      if (isAdmin && payload.role !== "ADMIN" && payload.role !== "VIEWER" && payload.role !== "MANAGER") {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
       if (payload.role === "ADMIN" && (
