@@ -137,6 +137,8 @@ export default function AdminPage() {
     router.push("/login");
   }
 
+  if (userRole === null) return <div className="min-h-screen flex items-center justify-center text-slate-400">로딩 중...</div>;
+
   const filteredStudents = students.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.email.toLowerCase().includes(search.toLowerCase())

@@ -7,10 +7,19 @@ function oneDayAgo() {
   return new Date(Date.now() - 24 * 60 * 60 * 1000);
 }
 
+function oneWeekAgo() {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+}
+
 // GET: 현재 사용자의 저장 문제 목록 + 오늘 저장 횟수
 export async function GET() {
   const session = await getSession();
   if (!session) return Response.json({ error: "로그인 필요" }, { status: 401 });
+
+  // 1주일 지난 저장 문제 자동 삭제
+  await prisma.savedQuestion.deleteMany({
+    where: { userId: session.id, savedAt: { lt: oneWeekAgo() } },
+  });
 
   const [saved, todayCount] = await Promise.all([
     prisma.savedQuestion.findMany({

@@ -57,6 +57,18 @@ export async function register() {
         if (result.count > 0) console.log(`[seed] ${u.email} → ${u.role}`);
       }
 
+      // 모든 문제 빈칸 마커 교체 (------- → ________)
+      const markerRow = await prisma.setting.findUnique({ where: { key: "blank_marker_v" } });
+      if (markerRow?.value !== "2") {
+        await prisma.$executeRaw`UPDATE "Question" SET "questionText" = REPLACE("questionText", '-------', '________')`;
+        await prisma.setting.upsert({
+          where: { key: "blank_marker_v" },
+          update: { value: "2" },
+          create: { key: "blank_marker_v", value: "2" },
+        });
+        console.log("[seed] 전체 문제 빈칸 마커 교체 완료");
+      }
+
       // 버전이 다르면 숙제 문제 교체
       const versionRow = await prisma.setting.findUnique({ where: { key: "homework1_version" } });
       if (versionRow?.value !== HOMEWORK1_VERSION) {
