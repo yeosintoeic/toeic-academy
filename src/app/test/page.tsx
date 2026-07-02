@@ -152,7 +152,6 @@ function TestHistory({ onBack }: { onBack: () => void }) {
 // ── 유형 선택 화면 ───────────────────────────────────────────
 function ModeSelect({ onHistory }: { onHistory: () => void }) {
   const router = useRouter();
-  const [showHomework, setShowHomework] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -193,34 +192,13 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
         </button>
 
         {/* 숙제 버튼 */}
-        <div className="rounded-xl border border-amber-300 overflow-hidden">
-          <button
-            onClick={() => setShowHomework((v) => !v)}
-            className="w-full bg-amber-50 hover:bg-amber-100 font-semibold px-6 py-4 transition-colors text-left flex items-center justify-between"
-          >
-            <div>
-              <div className="text-base text-amber-800">숙제</div>
-              <div className="text-xs text-amber-500 mt-0.5">Part 5 고정 문제지 · 30문제 · 25분</div>
-            </div>
-            <span className="text-amber-600 text-lg">{showHomework ? "▲" : "▼"}</span>
-          </button>
-          {showHomework && (
-            <div className="flex border-t border-amber-200">
-              <button
-                onClick={() => router.push("/test?mode=homework1")}
-                className="flex-1 bg-white hover:bg-amber-50 py-3 text-sm font-semibold text-amber-700 border-r border-amber-200 transition-colors"
-              >
-                1번 (1~30번)
-              </button>
-              <button
-                onClick={() => router.push("/test?mode=homework2")}
-                className="flex-1 bg-white hover:bg-amber-50 py-3 text-sm font-semibold text-amber-700 transition-colors"
-              >
-                2번 (31~60번)
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => router.push("/test?mode=homework1")}
+          className="w-full bg-amber-50 hover:bg-amber-100 border border-amber-300 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
+        >
+          <div className="text-base text-amber-800">숙제</div>
+          <div className="text-xs text-amber-500 mt-0.5">Part 5 고정 문제지 · 30문제 · 25분</div>
+        </button>
 
         {/* 시험 기록 버튼 */}
         <button
