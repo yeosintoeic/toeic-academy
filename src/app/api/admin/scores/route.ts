@@ -8,7 +8,10 @@ export async function GET() {
   }
 
   const sessions = await prisma.testSession.findMany({
-    where: { completedAt: { not: null } },
+    where: {
+      completedAt: { not: null },
+      user: { role: "STUDENT" },
+    },
     orderBy: { completedAt: "desc" },
     include: {
       user: { select: { id: true, name: true, email: true } },

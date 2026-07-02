@@ -21,6 +21,17 @@ interface Student {
   sessions: { totalScore: number; totalQuestions: number; completedAt: string }[];
 }
 
+interface ManagerSession {
+  id: string;
+  mode: string;
+  completedAt: string;
+  part5Score: number;
+  part6Score: number;
+  part7Score: number;
+  totalScore: number;
+  totalQuestions: number;
+}
+
 interface Manager {
   id: string;
   name: string;
@@ -30,6 +41,7 @@ interface Manager {
   role: string;
   createdAt: string;
   lastLoginAt: string | null;
+  sessions: ManagerSession[];
 }
 
 interface Score {
@@ -412,55 +424,66 @@ export default function AdminPage() {
               <div className="px-4 py-12 text-center text-slate-400 text-sm">매니저가 없습니다.</div>
             ) : (
               <>
-                <table className="hidden sm:table w-full">
-                  <thead>
-                    <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
-                      <th className="px-6 py-3">이름</th>
-                      <th className="px-6 py-3">이메일</th>
-                      <th className="px-6 py-3">플랜</th>
-                      <th className="px-6 py-3">만료일</th>
-                      <th className="px-6 py-3">마지막 접속</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {managers.map((m) => (
-                      <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm font-medium flex items-center gap-2">
-                          {m.name}
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-500">{m.email}</td>
-                        <td className="px-6 py-4 text-sm">
+                <div className="divide-y divide-slate-100">
+                  {managers.map((m) => (
+                    <div key={m.id} className="p-4 sm:p-6">
+                      {/* 매니저 기본 정보 */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-slate-800">{m.name}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${m.role === "ADMIN" ? "bg-slate-800 text-white" : "bg-purple-100 text-purple-600"}`}>
+                              {m.role === "ADMIN" ? "관리자" : "매니저"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">{m.email}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {m.lastLoginAt ? `최근 접속: ${new Date(m.lastLoginAt).toLocaleDateString("ko-KR")}` : "접속 기록 없음"}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                             {PLAN_LABEL[m.plan] ?? m.plan}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-500">
-                          {m.planExpiresAt ? new Date(m.planExpiresAt).getFullYear() > 9000 ? "영구" : new Date(m.planExpiresAt).toLocaleDateString("ko-KR") : "-"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-400">
-                          {m.lastLoginAt ? new Date(m.lastLoginAt).toLocaleDateString("ko-KR") : "없음"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="sm:hidden divide-y divide-slate-100">
-                  {managers.map((m) => (
-                    <div key={m.id} className="px-4 py-4 flex items-center justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-slate-800">{m.name}</span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>
+                          <p className="text-xs text-slate-400 mt-1">
+                            만료: {m.planExpiresAt ? new Date(m.planExpiresAt).getFullYear() > 9000 ? "영구" : new Date(m.planExpiresAt).toLocaleDateString("ko-KR") : "-"}
+                          </p>
                         </div>
-                        <p className="text-xs text-slate-400">{m.email}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {m.lastLoginAt ? `최근 접속: ${new Date(m.lastLoginAt).toLocaleDateString("ko-KR")}` : "접속 기록 없음"}
-                        </p>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 flex-shrink-0">
-                        {PLAN_LABEL[m.plan] ?? m.plan}
-                      </span>
+                      {/* 시험 기록 */}
+                      {m.sessions.length > 0 ? (
+                        <div className="mt-2 border border-slate-100 rounded-lg overflow-hidden">
+                          <p className="text-xs font-medium text-slate-500 px-3 py-2 bg-slate-50">응시 기록 ({m.sessions.length}회)</p>
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-left text-slate-400 border-b border-slate-100">
+                                <th className="px-3 py-2">응시일</th>
+                                <th className="px-3 py-2">유형</th>
+                                <th className="px-3 py-2">점수</th>
+                                <th className="px-3 py-2">정답률</th>
+                                <th className="px-3 py-2"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {m.sessions.map((s) => (
+                                <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/results?sessionId=${s.id}`)}>
+                                  <td className="px-3 py-2 text-slate-500">{new Date(s.completedAt).toLocaleDateString("ko-KR")}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`px-1.5 py-0.5 rounded font-medium ${s.mode === "full" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
+                                      {MODE_LABEL[s.mode] ?? s.mode}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 font-bold text-blue-600">{s.totalScore}/{s.totalQuestions}</td>
+                                  <td className="px-3 py-2 text-slate-500">{s.totalQuestions > 0 ? Math.round(s.totalScore / s.totalQuestions * 100) + "%" : "-"}</td>
+                                  <td className="px-3 py-2 text-blue-500">오답 →</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-300 mt-1">응시 기록 없음</p>
+                      )}
                     </div>
                   ))}
                 </div>
