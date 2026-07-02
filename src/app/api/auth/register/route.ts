@@ -33,17 +33,25 @@ export async function POST(req: NextRequest) {
   const planExpiresAt = new Date();
   planExpiresAt.setDate(planExpiresAt.getDate() + regCode.durationDays);
 
-  // 유저 생성 + 코드 삭제를 트랜잭션으로 처리 (코드 1개 = 1회 사용)
+  // 특정 이메일은 자동으로 역할/플랜 부여
+  const ROLE_OVERRIDES: Record<string, { role: string; plan: string; planExpiresAt: Date }> = {
+    "gugua35@naver.com": { role: "VIEWER", plan: "ALL", planExpiresAt: new Date("9999-12-31") },
+    "dlsdn0420@naver.com": { role: "ADMIN", plan: "ALL", planExpiresAt: new Date("9999-12-31") },
+    "sohee@yeosintoeic.com": { role: "MANAGER", plan: "ALL", planExpiresAt: new Date("9999-12-31") },
+  };
+  const normalizedEmail = email.toLowerCase().trim();
+  const override = ROLE_OVERRIDES[normalizedEmail];
+
   await prisma.$transaction([
     prisma.user.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password: hashed,
         name: name.trim(),
         phone: phone?.trim() || null,
-        role: "STUDENT",
-        plan: regCode.plan,
-        planExpiresAt,
+        role: override?.role ?? "STUDENT",
+        plan: override?.plan ?? regCode.plan,
+        planExpiresAt: override?.planExpiresAt ?? planExpiresAt,
         privacyConsent: !!privacyConsent,
         marketingConsent: !!marketingConsent,
       },

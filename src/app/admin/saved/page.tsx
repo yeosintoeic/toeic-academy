@@ -24,6 +24,7 @@ export default function AdminSavedPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/saved-questions")
@@ -40,6 +41,22 @@ export default function AdminSavedPage() {
       })
       .finally(() => setLoading(false));
   }, [router]);
+
+  async function handleDelete(id: string, userId: string) {
+    setDeleting(id);
+    const res = await fetch("/api/admin/saved-questions", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setDeleting(null);
+    if (res.ok) {
+      setGroups(prev => prev.map(g => {
+        if (g.userId !== userId) return g;
+        return { ...g, items: g.items.filter(item => item.id !== id) };
+      }).filter(g => g.items.length > 0));
+    }
+  }
 
   const filtered = groups.filter(g =>
     g.name.includes(search) || g.email.includes(search)
@@ -95,16 +112,18 @@ export default function AdminSavedPage() {
                       <div key={item.id} className="px-5 py-3.5 border-b border-slate-100 last:border-b-0">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <p className="text-xs text-slate-400 mb-1">#{i + 1} · {item.questionId}</p>
+                            <p className="text-xs text-slate-400 mb-1">#{i + 1} · {new Date(item.savedAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                             <p className="text-sm text-slate-700 leading-relaxed">
                               {item.questionText || "(문제 텍스트 없음)"}
                             </p>
                           </div>
-                          <p className="text-xs text-slate-400 flex-shrink-0 mt-1">
-                            {new Date(item.savedAt).toLocaleDateString("ko-KR", {
-                              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                            })}
-                          </p>
+                          <button
+                            onClick={() => handleDelete(item.id, g.userId)}
+                            disabled={deleting === item.id}
+                            className="flex-shrink-0 text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg border border-red-200 transition-colors disabled:opacity-50"
+                          >
+                            {deleting === item.id ? "삭제 중..." : "삭제"}
+                          </button>
                         </div>
                       </div>
                     ))}

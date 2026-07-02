@@ -150,9 +150,9 @@ export default function AdminPage() {
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="font-bold text-base text-slate-800">관리자 페이지</h1>
-          <Link href="/dashboard" className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+          <button onClick={() => router.push("/dashboard")} className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
             여신토익
-          </Link>
+          </button>
         </div>
 
         {/* PC 메뉴 */}
@@ -168,8 +168,10 @@ export default function AdminPage() {
                   <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
                 )}
               </Link>
-              <Link href="/admin/saved" className="text-sm text-yellow-600 hover:underline">저장 문제</Link>
             </>
+          )}
+          {(userRole === "ADMIN" || userRole === "VIEWER") && (
+            <Link href="/admin/saved" className="text-sm text-yellow-600 hover:underline">저장 문제</Link>
           )}
           <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
         </div>
@@ -198,8 +200,10 @@ export default function AdminPage() {
                   <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
                 )}
               </Link>
-              <Link href="/admin/saved" className="text-sm text-yellow-600">저장 문제</Link>
             </>
+          )}
+          {(userRole === "ADMIN" || userRole === "VIEWER") && (
+            <Link href="/admin/saved" className="text-sm text-yellow-600">저장 문제</Link>
           )}
           <button onClick={logout} className="text-sm text-red-500 text-left">로그아웃</button>
         </div>

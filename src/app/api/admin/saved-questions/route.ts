@@ -15,3 +15,16 @@ export async function GET() {
   });
   return Response.json({ saved });
 }
+
+export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session || (session.role !== "ADMIN" && session.role !== "VIEWER")) {
+    return Response.json({ error: "권한 없음" }, { status: 403 });
+  }
+
+  const { id } = await req.json();
+  if (!id) return Response.json({ error: "id 필요" }, { status: 400 });
+
+  await prisma.savedQuestion.delete({ where: { id } });
+  return Response.json({ ok: true });
+}
