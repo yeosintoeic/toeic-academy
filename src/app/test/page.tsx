@@ -31,28 +31,33 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-function buildShuffledOptions(questions: Question[]): Record<string, ShuffledOption[]> {
+function buildShuffledOptions(questions: Question[], shuffle: boolean): Record<string, ShuffledOption[]> {
   const displayKeys = ["A", "B", "C", "D"];
   const result: Record<string, ShuffledOption[]> = {};
   for (const q of questions) {
-    const opts = shuffleArray([
+    const base = [
       { originalKey: "A", text: q.optionA },
       { originalKey: "B", text: q.optionB },
       { originalKey: "C", text: q.optionC },
       { originalKey: "D", text: q.optionD },
-    ]);
+    ];
+    const opts = shuffle ? shuffleArray(base) : base;
     result[q.id] = opts.map((opt, i) => ({ displayKey: displayKeys[i], ...opt }));
   }
   return result;
 }
 
-type Mode = "full" | "part5" | "part6" | "part7";
+type Mode = "full" | "part5" | "part6" | "part7" | "homework1" | "homework2";
+
+const HOMEWORK_MODES: Mode[] = ["homework1", "homework2"];
 
 const MODE_TIMER: Record<Mode, number> = {
   full: 75 * 60,
   part5: 25 * 60,
   part6: 15 * 60,
   part7: 55 * 60,
+  homework1: 25 * 60,
+  homework2: 25 * 60,
 };
 
 const MODE_LABEL: Record<Mode, string> = {
@@ -60,6 +65,8 @@ const MODE_LABEL: Record<Mode, string> = {
   part5: "Part 5 집중연습",
   part6: "Part 6 집중연습",
   part7: "Part 7 집중연습",
+  homework1: "숙제 1번",
+  homework2: "숙제 2번",
 };
 
 function formatTime(seconds: number) {
@@ -145,6 +152,7 @@ function TestHistory({ onBack }: { onBack: () => void }) {
 // ── 유형 선택 화면 ───────────────────────────────────────────
 function ModeSelect({ onHistory }: { onHistory: () => void }) {
   const router = useRouter();
+  const [showHomework, setShowHomework] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -183,6 +191,36 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           <div className="text-base text-slate-800">Part 7 집중연습</div>
           <div className="text-xs text-slate-400 mt-0.5">2중·3중·4중 지문 · 54문제 · 55분</div>
         </button>
+
+        {/* 숙제 버튼 */}
+        <div className="rounded-xl border border-amber-300 overflow-hidden">
+          <button
+            onClick={() => setShowHomework((v) => !v)}
+            className="w-full bg-amber-50 hover:bg-amber-100 font-semibold px-6 py-4 transition-colors text-left flex items-center justify-between"
+          >
+            <div>
+              <div className="text-base text-amber-800">숙제</div>
+              <div className="text-xs text-amber-500 mt-0.5">Part 5 고정 문제지 · 30문제 · 25분</div>
+            </div>
+            <span className="text-amber-600 text-lg">{showHomework ? "▲" : "▼"}</span>
+          </button>
+          {showHomework && (
+            <div className="flex border-t border-amber-200">
+              <button
+                onClick={() => router.push("/test?mode=homework1")}
+                className="flex-1 bg-white hover:bg-amber-50 py-3 text-sm font-semibold text-amber-700 border-r border-amber-200 transition-colors"
+              >
+                1번 (1~30번)
+              </button>
+              <button
+                onClick={() => router.push("/test?mode=homework2")}
+                className="flex-1 bg-white hover:bg-amber-50 py-3 text-sm font-semibold text-amber-700 transition-colors"
+              >
+                2번 (31~60번)
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* 시험 기록 버튼 */}
         <button
@@ -325,7 +363,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
       }
       setSessionId(data.sessionId);
       setQuestions(data.questions);
-      setOptionOrders(buildShuffledOptions(data.questions));
+      setOptionOrders(buildShuffledOptions(data.questions, !HOMEWORK_MODES.includes(mode)));
       setLoading(false);
     }
     startTest();
@@ -353,8 +391,14 @@ function TestQuiz({ mode }: { mode: Mode }) {
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3">
       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-slate-700 font-semibold text-lg">AI가 맞춤 문제를 생성하는 중입니다...</p>
-      <p className="text-slate-400 text-sm">최대 30초 정도 소요될 수 있습니다</p>
+      {HOMEWORK_MODES.includes(mode) ? (
+        <p className="text-slate-700 font-semibold text-lg">문제를 불러오는 중...</p>
+      ) : (
+        <>
+          <p className="text-slate-700 font-semibold text-lg">AI가 맞춤 문제를 생성하는 중입니다...</p>
+          <p className="text-slate-400 text-sm">최대 30초 정도 소요될 수 있습니다</p>
+        </>
+      )}
     </div>
   );
   if (error) return (
@@ -534,7 +578,7 @@ function TestContent() {
   const rawMode = params.get("mode");
   const [showHistory, setShowHistory] = useState(false);
 
-  if (rawMode && ["full", "part5", "part6", "part7"].includes(rawMode)) {
+  if (rawMode && ["full", "part5", "part6", "part7", "homework1", "homework2"].includes(rawMode)) {
     return <TestQuiz mode={rawMode as Mode} />;
   }
 

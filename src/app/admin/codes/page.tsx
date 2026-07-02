@@ -31,6 +31,20 @@ export default function AdminCodesPage() {
   const [bulk, setBulk] = useState(1);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyCode(id: string, code: string) {
+    navigator.clipboard.writeText(code).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = code;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    });
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
 
   async function load() {
     const res = await fetch("/api/admin/codes");
@@ -203,21 +217,29 @@ export default function AdminCodesPage() {
             <table className="w-full">
               <thead>
                 <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+                  <th className="px-4 py-3 w-10">#</th>
                   <th className="px-4 py-3">코드</th>
                   <th className="px-4 py-3">플랜</th>
                   <th className="px-4 py-3">기간</th>
                   <th className="px-4 py-3">메모</th>
-                  <th className="px-4 py-3">삭제</th>
+                  <th className="px-4 py-3">관리</th>
                 </tr>
               </thead>
               <tbody>
-                {codes.map((c) => (
+                {codes.map((c, idx) => (
                   <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50">
+                    <td className="px-4 py-3 text-xs text-slate-400">{idx + 1}</td>
                     <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">{c.code}</td>
                     <td className="px-4 py-3 text-sm">{PLAN_LABEL[c.plan] ?? c.plan}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{c.durationDays >= 36500 ? "무제한" : `${c.durationDays}일`}</td>
                     <td className="px-4 py-3 text-sm text-slate-400">{c.label || "-"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex items-center gap-2">
+                      <button
+                        onClick={() => copyCode(c.id, c.code)}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${copiedId === c.id ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                      >
+                        {copiedId === c.id ? "복사됨" : "복사"}
+                      </button>
                       <button onClick={() => handleDelete(c.id)} className="text-xs text-red-400 hover:text-red-600">삭제</button>
                     </td>
                   </tr>

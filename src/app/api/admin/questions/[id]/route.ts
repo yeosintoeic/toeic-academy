@@ -12,11 +12,14 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const { questionText, optionA, optionB, optionC, optionD, answer, explanation, category } = await req.json();
+  const { questionText, optionA, optionB, optionC, optionD, answer, explanation, category, homeworkSet } = await req.json();
 
   const question = await prisma.question.update({
     where: { id },
-    data: { questionText, optionA, optionB, optionC, optionD, answer, explanation, category },
+    data: {
+      questionText, optionA, optionB, optionC, optionD, answer, explanation, category,
+      ...(homeworkSet !== undefined && { homeworkSet: homeworkSet ?? null }),
+    },
   });
 
   return Response.json(question);

@@ -8,38 +8,36 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          String    @default("STUDENT")
-  plan          String    @default("NONE")
-  planExpiresAt DateTime?
-  loginAttempts    Int       @default(0)
-  mustChangePw     Boolean   @default(false)
+  id               String          @id @default(cuid())
+  email            String          @unique
+  password         String
+  name             String
+  role             String          @default("STUDENT")
+  plan             String          @default("NONE")
+  planExpiresAt    DateTime?
+  createdAt        DateTime        @default(now())
+  loginAttempts    Int             @default(0)
+  mustChangePw     Boolean         @default(false)
+  phone            String?
+  privacyConsent   Boolean         @default(false)
+  marketingConsent Boolean         @default(false)
   sessionNonce     String?
   lastLoginAt      DateTime?
-  phone            String?
-  privacyConsent   Boolean   @default(false)
-  marketingConsent Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-
-  sessions       TestSession[]
-  captureLogs    CaptureLog[]
-  savedQuestions SavedQuestion[]
+  captureLogs      CaptureLog[]
+  savedQuestions   SavedQuestion[]
+  sessions         TestSession[]
 }
 
 model QuestionGroup {
-  id          String @id @default(cuid())
+  id          String     @id @default(cuid())
   part        Int
   passageText String
-  passageType String @default("")
-
-  questions Question[]
+  passageType String     @default("")
+  questions   Question[]
 }
 
 model Question {
-  id           String @id @default(cuid())
+  id           String         @id @default(cuid())
   part         Int
   questionText String
   optionA      String
@@ -47,40 +45,37 @@ model Question {
   optionC      String
   optionD      String
   answer       String
-  explanation  String @default("")
-  category     String @default("")
-
-  groupId String?
-  group   QuestionGroup? @relation(fields: [groupId], references: [id])
-
-  answers TestAnswer[]
+  explanation  String         @default("")
+  category     String         @default("")
+  groupId      String?
+  group        QuestionGroup? @relation(fields: [groupId], references: [id])
+  homeworkSet  Int?
+  answers      TestAnswer[]
 }
 
 model TestSession {
-  id             String    @id @default(cuid())
+  id             String       @id @default(cuid())
   userId         String
-  mode           String    @default("full") // full | part5 | part6 | part7
-  startedAt      DateTime  @default(now())
+  mode           String       @default("full")
+  startedAt      DateTime     @default(now())
   completedAt    DateTime?
-  part5Score     Int       @default(0)
-  part6Score     Int       @default(0)
-  part7Score     Int       @default(0)
-  totalScore     Int       @default(0)
-  totalQuestions Int       @default(0)
-
-  user    User         @relation(fields: [userId], references: [id])
-  answers TestAnswer[]
+  part5Score     Int          @default(0)
+  part6Score     Int          @default(0)
+  part7Score     Int          @default(0)
+  totalScore     Int          @default(0)
+  totalQuestions Int          @default(0)
+  answers        TestAnswer[]
+  user           User         @relation(fields: [userId], references: [id])
 }
 
 model TestAnswer {
-  id         String  @id @default(cuid())
+  id         String      @id @default(cuid())
   sessionId  String
   questionId String
   selected   String
   isCorrect  Boolean
-
-  session  TestSession @relation(fields: [sessionId], references: [id])
-  question Question    @relation(fields: [questionId], references: [id])
+  question   Question    @relation(fields: [questionId], references: [id])
+  session    TestSession @relation(fields: [sessionId], references: [id])
 }
 
 model Setting {
@@ -91,7 +86,7 @@ model Setting {
 model RegisterCode {
   id           String   @id @default(cuid())
   code         String   @unique
-  plan         String   // TEST | LECTURE | FULL
+  plan         String
   durationDays Int
   label        String   @default("")
   createdAt    DateTime @default(now())
@@ -100,23 +95,23 @@ model RegisterCode {
 model CaptureLog {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String
   page      String
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model SavedQuestion {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  questionId    String
-  questionText  String   @default("")
-  sessionId     String?
-  savedAt       DateTime @default(now())
-  isActive      Boolean  @default(true)
+  id           String   @id @default(cuid())
+  userId       String
+  questionId   String
+  questionText String   @default("")
+  sessionId    String?
+  savedAt      DateTime @default(now())
+  isActive     Boolean  @default(true)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questionId])
   @@index([userId])

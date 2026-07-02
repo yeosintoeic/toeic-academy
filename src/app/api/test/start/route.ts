@@ -4,7 +4,7 @@ import { generatePart5, generatePart6, generatePart7 } from "@/lib/ai-generate";
 
 export const maxDuration = 120;
 
-type Mode = "full" | "part5" | "part6" | "part7";
+type Mode = "full" | "part5" | "part6" | "part7" | "homework1" | "homework2";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -31,12 +31,35 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const mode: Mode = ["full", "part5", "part6", "part7"].includes(body.mode) ? body.mode : "full";
+  const mode: Mode = ["full", "part5", "part6", "part7", "homework1", "homework2"].includes(body.mode) ? body.mode : "full";
 
   let p5Ids: string[] = [];
   let p6Ids: string[] = [];
   let p7Ids: string[] = [];
   let aiUsed = false;
+
+  // 숙제 모드: 고정 문제 반환 (AI 없음, 랜덤 없음)
+  if (mode === "homework1" || mode === "homework2") {
+    const setNum = mode === "homework1" ? 1 : 2;
+    const hwQuestions = await prisma.question.findMany({
+      where: { part: 5, homeworkSet: setNum },
+      orderBy: { id: "asc" },
+    });
+
+    if (hwQuestions.length === 0) {
+      return Response.json(
+        { error: "숙제 문제가 아직 설정되지 않았습니다. 관리자에게 문의하세요." },
+        { status: 404 }
+      );
+    }
+
+    const testSession = await prisma.testSession.create({
+      data: { userId: session.id, mode, totalQuestions: hwQuestions.length },
+    });
+
+    const safeQuestions = hwQuestions.map(({ answer: _a, explanation: _e, ...rest }) => rest);
+    return Response.json({ sessionId: testSession.id, questions: safeQuestions, mode });
+  }
 
   // AI 생성 시도, 실패 시 DB 풀로 폴백
   try {
