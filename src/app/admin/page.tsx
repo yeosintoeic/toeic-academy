@@ -92,47 +92,55 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function load() {
-      const meRes = await fetch("/api/auth/me");
-      const meData = await meRes.json();
-      const role = meData.user?.role;
-      if (!role || (role !== "ADMIN" && role !== "VIEWER" && role !== "MANAGER")) {
-        router.push("/dashboard");
-        return;
-      }
-      setUserRole(role);
-      if (role === "VIEWER" || role === "MANAGER") {
-        setTab("scores");
-        const scoreRes = await fetch("/api/admin/scores");
-        const scoreData = await scoreRes.json();
+      try {
+        const meRes = await fetch("/api/auth/me");
+        const meData = await meRes.json();
+        if (!meData.user) {
+          window.location.href = meData?.kicked ? "/login?kicked=1" : "/login";
+          return;
+        }
+        const role = meData.user.role as string;
+        if (role !== "ADMIN" && role !== "VIEWER" && role !== "MANAGER") {
+          window.location.href = "/dashboard";
+          return;
+        }
+        setUserRole(role);
+        if (role === "VIEWER" || role === "MANAGER") {
+          setTab("scores");
+          const scoreRes = await fetch("/api/admin/scores");
+          const scoreData = await scoreRes.json().catch(() => []);
+          const validScores = Array.isArray(scoreData) ? scoreData : [];
+          setScores(validScores);
+          const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
+          setExpandedStudents(uids);
+          return;
+        }
+        const [stuRes, scoreRes, qRes, mgrRes] = await Promise.all([
+          fetch("/api/admin/students"),
+          fetch("/api/admin/scores"),
+          fetch("/api/admin/questions"),
+          fetch("/api/admin/managers"),
+        ]);
+        const stuData = await stuRes.json().catch(() => []);
+        const scoreData = await scoreRes.json().catch(() => []);
+        const mgrData = await mgrRes.json().catch(() => []);
+        setStudents(Array.isArray(stuData) ? stuData : []);
+        setManagers(Array.isArray(mgrData) ? mgrData : []);
         const validScores = Array.isArray(scoreData) ? scoreData : [];
         setScores(validScores);
         const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
         setExpandedStudents(uids);
-        return;
+        const qs = await qRes.json().catch(() => []);
+        setQuestionCount(Array.isArray(qs) ? qs.length : 0);
+        const capRes = await fetch("/api/capture-log");
+        const capData = await capRes.json().catch(() => []);
+        setCaptureCount(Array.isArray(capData) ? capData.length : 0);
+      } catch {
+        window.location.href = "/login";
       }
-      const [stuRes, scoreRes, qRes, mgrRes] = await Promise.all([
-        fetch("/api/admin/students"),
-        fetch("/api/admin/scores"),
-        fetch("/api/admin/questions"),
-        fetch("/api/admin/managers"),
-      ]);
-      const stuData = await stuRes.json();
-      const scoreData = await scoreRes.json();
-      const mgrData = await mgrRes.json();
-      setStudents(Array.isArray(stuData) ? stuData : []);
-      setManagers(Array.isArray(mgrData) ? mgrData : []);
-      const validScores = Array.isArray(scoreData) ? scoreData : [];
-      setScores(validScores);
-      const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
-      setExpandedStudents(uids);
-      const qs = await qRes.json();
-      setQuestionCount(Array.isArray(qs) ? qs.length : 0);
-      const capRes = await fetch("/api/capture-log");
-      const capData = await capRes.json().catch(() => []);
-      setCaptureCount(Array.isArray(capData) ? capData.length : 0);
     }
     load();
-  }, [router]);
+  }, []);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -152,9 +160,9 @@ export default function AdminPage() {
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="font-bold text-base text-slate-800">관리자 페이지</h1>
-          <button onClick={() => router.push("/dashboard")} className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+          <a href="/dashboard" className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
             여신토익
-          </button>
+          </a>
         </div>
 
         {/* PC 메뉴 */}
