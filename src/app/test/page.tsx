@@ -445,20 +445,22 @@ function TestQuiz({ mode }: { mode: Mode }) {
         <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6 relative">
           <div className="flex items-start justify-between mb-4">
             <p className="text-slate-800 font-medium leading-relaxed flex-1 pr-3">{q.questionText}</p>
-            <button
-              onClick={() => toggleSave(q.id, q.questionText)}
-              title={savedIds.includes(q.id) ? "저장 취소" : todaySaveCount >= MAX_DAILY ? `오늘 저장 한도(${MAX_DAILY}회)를 초과했습니다` : "문제 저장"}
-              className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border text-xs transition-colors ${
-                savedIds.includes(q.id)
-                  ? "bg-yellow-50 border-yellow-400 text-yellow-700"
-                  : todaySaveCount >= MAX_DAILY
-                  ? "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed"
-                  : "bg-slate-50 border-slate-200 text-slate-500 hover:border-yellow-400 hover:text-yellow-600"
-              }`}
-            >
-              <span className="text-base">{savedIds.includes(q.id) ? "★" : "☆"}</span>
-              <span className="font-medium">{todaySaveCount}/{MAX_DAILY}</span>
-            </button>
+            {!HOMEWORK_MODES.includes(mode) && (
+              <button
+                onClick={() => toggleSave(q.id, q.questionText)}
+                title={savedIds.includes(q.id) ? "저장 취소" : todaySaveCount >= MAX_DAILY ? `오늘 저장 한도(${MAX_DAILY}회)를 초과했습니다` : "문제 저장"}
+                className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg border text-xs transition-colors ${
+                  savedIds.includes(q.id)
+                    ? "bg-yellow-50 border-yellow-400 text-yellow-700"
+                    : todaySaveCount >= MAX_DAILY
+                    ? "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed"
+                    : "bg-slate-50 border-slate-200 text-slate-500 hover:border-yellow-400 hover:text-yellow-600"
+                }`}
+              >
+                <span className="text-base">{savedIds.includes(q.id) ? "★" : "☆"}</span>
+                <span className="font-medium">{todaySaveCount}/{MAX_DAILY}</span>
+              </button>
+            )}
           </div>
           <div className="space-y-3">
             {options.map(({ displayKey, originalKey, text }) => (
