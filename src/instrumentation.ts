@@ -1,4 +1,4 @@
-const HOMEWORK1_VERSION = "v5";
+const HOMEWORK1_VERSION = "v6";
 
 const HOMEWORK1 = [
   { questionText: "The company plans to ________ its operations into Southeast Asia next year.", optionA: "expand", optionB: "expansion", optionC: "expansive", optionD: "expanded", answer: "A", explanation: "✅ A (expand) — 동사원형, plans to 뒤에 올바른 형태\n❌ B (expansion) — 명사: 동사 자리에 명사 불가\n❌ C (expansive) — 형용사: 동사 자리에 형용사 불가\n❌ D (expanded) — 과거/과거분사: to 뒤에는 동사원형 필요\n💡 [동사] + to + 동사원형 구조\nplans to, wants to, needs to, hopes to, intends to 모두 동일\n❗ to 뒤에는 반드시 동사원형!\n🔑 해석: 그 회사는 내년에 동남아시아로 사업을 확장할 계획입니다." },
@@ -35,6 +35,9 @@ const HOMEWORK1 = [
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    if (!process.env.DATABASE_URL) {
+      process.env.DATABASE_URL = "file:/app/dev.db";
+    }
     const { PrismaClient } = await import("@prisma/client");
     const prisma = new PrismaClient();
 
