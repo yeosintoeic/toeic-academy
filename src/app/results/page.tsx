@@ -66,7 +66,7 @@ function ResultContent() {
   const [error, setError] = useState("");
   const [showReview, setShowReview] = useState(false);
   const [filterPart, setFilterPart] = useState<"all" | 5 | 6 | 7>("all");
-  const [filterWrong, setFilterWrong] = useState(false);
+  const [filterCorrectness, setFilterCorrectness] = useState<"all" | "correct" | "wrong">("all");
 
   useEffect(() => {
     if (!sessionId) {
@@ -111,7 +111,8 @@ function ResultContent() {
   const seenGroupIds = new Set<string>();
   const filteredAnswers = answers.filter((a) => {
     if (filterPart !== "all" && a.question.part !== filterPart) return false;
-    if (filterWrong && a.isCorrect) return false;
+    if (filterCorrectness === "correct" && !a.isCorrect) return false;
+    if (filterCorrectness === "wrong" && a.isCorrect) return false;
     return true;
   });
 
@@ -221,19 +222,28 @@ function ResultContent() {
                   {p === "all" ? "전체" : `Part ${p}`}
                 </button>
               ))}
+              <div className="flex rounded-lg overflow-hidden border border-slate-200 text-xs font-medium">
+                {(["all", "correct", "wrong"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilterCorrectness(f)}
+                    className={`px-3 py-1.5 ${
+                      filterCorrectness === f
+                        ? f === "wrong" ? "bg-red-500 text-white" : f === "correct" ? "bg-green-500 text-white" : "bg-blue-600 text-white"
+                        : "bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {f === "all" ? "전체" : f === "correct" ? "정답" : "오답"}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={() => window.print()}
                 className="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 print:hidden"
               >
                 🖨️ 인쇄하기
               </button>
-              <button
-                onClick={() => setFilterWrong((v) => !v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ml-2 ${filterWrong ? "bg-red-500 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
-              >
-                오답만 보기
-              </button>
-              <span className="text-xs text-slate-400 ml-auto">{filteredAnswers.length}문제</span>
+              <span className="text-xs text-slate-400">{filteredAnswers.length}문제</span>
             </div>
 
             <div className="space-y-4">
