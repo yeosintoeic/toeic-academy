@@ -79,7 +79,6 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error("[startup-seed] 오류:", e);
-    process.exit(1);
+    console.error("[startup-seed] 오류 (서버는 계속 시작):", e);
   })
   .finally(() => prisma.$disconnect());
