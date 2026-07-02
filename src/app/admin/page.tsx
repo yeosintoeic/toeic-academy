@@ -127,7 +127,12 @@ export default function AdminPage() {
     <div className="min-h-screen bg-slate-50">
       {/* 헤더 */}
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="font-bold text-base text-slate-800">관리자 페이지</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-bold text-base text-slate-800">관리자 페이지</h1>
+          <Link href="/dashboard" className="text-xs px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            여신토익
+          </Link>
+        </div>
 
         {/* PC 메뉴 */}
         <div className="hidden sm:flex items-center gap-4">
@@ -156,6 +161,7 @@ export default function AdminPage() {
       {/* 모바일 드롭다운 메뉴 */}
       {menuOpen && (
         <div className="sm:hidden bg-white border-b border-slate-200 px-4 py-3 flex flex-col gap-3">
+          <Link href="/dashboard" className="text-sm font-semibold text-blue-700">여신토익으로 이동</Link>
           <Link href="/admin/codes" className="text-sm text-blue-600">코드 관리</Link>
           <Link href="/admin/lectures" className="text-sm text-blue-600">강의 관리</Link>
           <Link href="/admin/questions" className="text-sm text-blue-600">문제 관리</Link>
