@@ -21,6 +21,17 @@ interface Student {
   sessions: { totalScore: number; totalQuestions: number; completedAt: string }[];
 }
 
+interface Manager {
+  id: string;
+  name: string;
+  email: string;
+  plan: string;
+  planExpiresAt: string | null;
+  role: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
 interface Score {
   id: string;
   mode: string;
@@ -40,9 +51,10 @@ const MODE_LABEL: Record<string, string> = {
 export default function AdminPage() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
-  const [tab, setTab] = useState<"students" | "scores" | "inactive">("students");
+  const [tab, setTab] = useState<"students" | "scores" | "inactive" | "managers">("students");
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,14 +77,17 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function load() {
-      const [stuRes, scoreRes, qRes] = await Promise.all([
+      const [stuRes, scoreRes, qRes, mgrRes] = await Promise.all([
         fetch("/api/admin/students"),
         fetch("/api/admin/scores"),
         fetch("/api/admin/questions"),
+        fetch("/api/admin/managers"),
       ]);
       const stuData = await stuRes.json();
       const scoreData = await scoreRes.json();
+      const mgrData = await mgrRes.json();
       setStudents(Array.isArray(stuData) ? stuData : []);
+      setManagers(Array.isArray(mgrData) ? mgrData : []);
       const validScores = Array.isArray(scoreData) ? scoreData : [];
       setScores(validScores);
       const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
@@ -161,7 +176,7 @@ export default function AdminPage() {
         </div>
 
         {/* 탭 */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4 flex-wrap">
           <button
             onClick={() => setTab("students")}
             className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "students" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
@@ -188,6 +203,17 @@ export default function AdminPage() {
                   const d = s.lastLoginAt ? (Date.now() - new Date(s.lastLoginAt).getTime()) / 86400000 : Infinity;
                   return d >= 90;
                 }).length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setTab("managers")}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "managers" ? "bg-purple-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+          >
+            매니저 목록
+            {managers.length > 0 && (
+              <span className={`ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full ${tab === "managers" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-600"}`}>
+                {managers.length}
               </span>
             )}
           </button>
@@ -226,13 +252,9 @@ export default function AdminPage() {
                   <tbody>
                     {filteredStudents.map((s) => {
                       const expired = s.planExpiresAt && new Date(s.planExpiresAt) < new Date();
-                      const isManager = s.role === "MANAGER";
                       return (
                         <tr key={s.id} onClick={() => router.push(`/admin/students/${s.id}`)} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
-                          <td className="px-6 py-4 text-sm font-medium flex items-center gap-2">
-                            {s.name}
-                            {isManager && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>}
-                          </td>
+                          <td className="px-6 py-4 text-sm font-medium">{s.name}</td>
                           <td className="px-6 py-4 text-sm text-slate-500">{s.email}</td>
                           <td className="px-6 py-4 text-sm">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.plan === "NONE" ? "bg-slate-100 text-slate-500" : expired ? "bg-red-100 text-red-500" : "bg-blue-100 text-blue-700"}`}>
@@ -253,7 +275,6 @@ export default function AdminPage() {
                 <div className="sm:hidden divide-y divide-slate-100">
                   {filteredStudents.map((s) => {
                     const expired = s.planExpiresAt && new Date(s.planExpiresAt) < new Date();
-                    const isManager = s.role === "MANAGER";
                     return (
                       <button
                         key={s.id}
@@ -263,7 +284,6 @@ export default function AdminPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-slate-800">{s.name}</span>
-                            {isManager && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>}
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.plan === "NONE" ? "bg-slate-100 text-slate-500" : expired ? "bg-red-100 text-red-500" : "bg-blue-100 text-blue-700"}`}>
                               {PLAN_LABEL[s.plan] ?? s.plan}
                             </span>
@@ -379,6 +399,74 @@ export default function AdminPage() {
           <InactiveStudents students={students} onDeleted={() => {
             fetch("/api/admin/students").then(r => r.json()).then(d => setStudents(Array.isArray(d) ? d : []));
           }} />
+        )}
+
+        {/* 매니저 목록 */}
+        {tab === "managers" && (
+          <div className="bg-white rounded-xl border border-slate-200">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-800">매니저 목록</p>
+              <span className="text-xs text-slate-400">{managers.length}명</span>
+            </div>
+            {managers.length === 0 ? (
+              <div className="px-4 py-12 text-center text-slate-400 text-sm">매니저가 없습니다.</div>
+            ) : (
+              <>
+                <table className="hidden sm:table w-full">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-500 border-b border-slate-100">
+                      <th className="px-6 py-3">이름</th>
+                      <th className="px-6 py-3">이메일</th>
+                      <th className="px-6 py-3">플랜</th>
+                      <th className="px-6 py-3">만료일</th>
+                      <th className="px-6 py-3">마지막 접속</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {managers.map((m) => (
+                      <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm font-medium flex items-center gap-2">
+                          {m.name}
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-500">{m.email}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                            {PLAN_LABEL[m.plan] ?? m.plan}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-500">
+                          {m.planExpiresAt ? new Date(m.planExpiresAt).getFullYear() > 9000 ? "영구" : new Date(m.planExpiresAt).toLocaleDateString("ko-KR") : "-"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-400">
+                          {m.lastLoginAt ? new Date(m.lastLoginAt).toLocaleDateString("ko-KR") : "없음"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="sm:hidden divide-y divide-slate-100">
+                  {managers.map((m) => (
+                    <div key={m.id} className="px-4 py-4 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-slate-800">{m.name}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>
+                        </div>
+                        <p className="text-xs text-slate-400">{m.email}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {m.lastLoginAt ? `최근 접속: ${new Date(m.lastLoginAt).toLocaleDateString("ko-KR")}` : "접속 기록 없음"}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 flex-shrink-0">
+                        {PLAN_LABEL[m.plan] ?? m.plan}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </main>
     </div>

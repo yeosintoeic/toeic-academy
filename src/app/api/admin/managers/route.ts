@@ -7,9 +7,9 @@ export async function GET() {
     return Response.json({ error: "권한 없음" }, { status: 403 });
   }
 
-  const students = await prisma.user.findMany({
-    where: { role: "STUDENT" },
-    orderBy: { createdAt: "desc" },
+  const managers = await prisma.user.findMany({
+    where: { role: "MANAGER" },
+    orderBy: { createdAt: "asc" },
     select: {
       id: true,
       name: true,
@@ -19,14 +19,8 @@ export async function GET() {
       role: true,
       createdAt: true,
       lastLoginAt: true,
-      sessions: {
-        where: { completedAt: { not: null } },
-        select: { totalScore: true, totalQuestions: true, completedAt: true },
-        orderBy: { completedAt: "desc" },
-        take: 1,
-      },
     },
   });
 
-  return Response.json(students);
+  return Response.json(managers);
 }
