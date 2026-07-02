@@ -33,13 +33,6 @@ export async function proxy(req: NextRequest) {
       if (isAdmin && payload.role !== "ADMIN" && payload.role !== "VIEWER" && payload.role !== "MANAGER") {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
-      if (payload.role === "ADMIN" && (
-        pathname.startsWith("/dashboard") ||
-        pathname.startsWith("/test") ||
-        pathname.startsWith("/lectures")
-      )) {
-        return NextResponse.redirect(new URL("/admin", req.url));
-      }
     }
   }
 
