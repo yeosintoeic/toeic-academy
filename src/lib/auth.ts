@@ -33,6 +33,9 @@ export async function getSession() {
   const payload = await verifyToken(token);
   if (!payload) return null;
 
+  // ADMIN은 동시접속 허용 — nonce 검사 생략
+  if (payload.role === "ADMIN") return payload;
+
   // nonce 없는 구형 JWT는 즉시 거부 (동시 접속 방지가 작동하지 않는 문제 해결)
   if (!payload.sessionNonce) return null;
 
