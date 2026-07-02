@@ -15,6 +15,7 @@ interface Student {
   email: string;
   plan: string;
   planExpiresAt: string | null;
+  role: string;
   createdAt: string;
   lastLoginAt: string | null;
   sessions: { totalScore: number; totalQuestions: number; completedAt: string }[];
@@ -225,9 +226,13 @@ export default function AdminPage() {
                   <tbody>
                     {filteredStudents.map((s) => {
                       const expired = s.planExpiresAt && new Date(s.planExpiresAt) < new Date();
+                      const isManager = s.role === "MANAGER";
                       return (
                         <tr key={s.id} onClick={() => router.push(`/admin/students/${s.id}`)} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
-                          <td className="px-6 py-4 text-sm font-medium">{s.name}</td>
+                          <td className="px-6 py-4 text-sm font-medium flex items-center gap-2">
+                            {s.name}
+                            {isManager && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>}
+                          </td>
                           <td className="px-6 py-4 text-sm text-slate-500">{s.email}</td>
                           <td className="px-6 py-4 text-sm">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.plan === "NONE" ? "bg-slate-100 text-slate-500" : expired ? "bg-red-100 text-red-500" : "bg-blue-100 text-blue-700"}`}>
@@ -248,6 +253,7 @@ export default function AdminPage() {
                 <div className="sm:hidden divide-y divide-slate-100">
                   {filteredStudents.map((s) => {
                     const expired = s.planExpiresAt && new Date(s.planExpiresAt) < new Date();
+                    const isManager = s.role === "MANAGER";
                     return (
                       <button
                         key={s.id}
@@ -257,6 +263,7 @@ export default function AdminPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-slate-800">{s.name}</span>
+                            {isManager && <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-600">매니저</span>}
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.plan === "NONE" ? "bg-slate-100 text-slate-500" : expired ? "bg-red-100 text-red-500" : "bg-blue-100 text-blue-700"}`}>
                               {PLAN_LABEL[s.plan] ?? s.plan}
                             </span>
@@ -384,6 +391,7 @@ function InactiveStudents({ students, onDeleted }: { students: Student[]; onDele
 
   const inactive = students
     .filter((s) => {
+      if (s.role === "MANAGER") return false;
       const ms = s.lastLoginAt ? now - new Date(s.lastLoginAt).getTime() : Infinity;
       return ms / 86400000 >= DAYS;
     })

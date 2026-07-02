@@ -98,6 +98,11 @@ export async function DELETE(
 
   const { id } = await params;
 
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (target?.role === "MANAGER" || target?.role === "ADMIN") {
+    return Response.json({ error: "매니저/관리자 계정은 삭제할 수 없습니다." }, { status: 403 });
+  }
+
   const sessions = await prisma.testSession.findMany({
     where: { userId: id },
     select: { id: true },
