@@ -67,11 +67,13 @@ export default function AdminPage() {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
-  const [tab, setTab] = useState<"students" | "scores" | "inactive" | "managers">("students");
+  const [tab, setTab] = useState<"students" | "scores" | "inactive" | "managers" | "inquiries">("students");
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [captureCount, setCaptureCount] = useState(0);
+  const [inquiries, setInquiries] = useState<{ id: string; content: string; isRead: boolean; createdAt: string; user: { id: string; name: string; email: string } }[]>([]);
+  const [inquiryLoading, setInquiryLoading] = useState(false);
 
   function toggleStudent(uid: string) {
     setExpandedStudents((prev) => {
@@ -269,6 +271,26 @@ export default function AdminPage() {
                 {managers.length > 0 && (
                   <span className={`ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full ${tab === "managers" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-600"}`}>
                     {managers.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={async () => {
+                  setTab("inquiries");
+                  if (inquiries.length === 0) {
+                    setInquiryLoading(true);
+                    const res = await fetch("/api/admin/inquiries");
+                    const data = await res.json();
+                    setInquiries(Array.isArray(data) ? data : []);
+                    setInquiryLoading(false);
+                  }
+                }}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium relative ${tab === "inquiries" ? "bg-green-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+              >
+                문의함
+                {inquiries.filter(i => !i.isRead).length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                    {inquiries.filter(i => !i.isRead).length}
                   </span>
                 )}
               </button>
@@ -516,6 +538,50 @@ export default function AdminPage() {
             })}
           </div>
         )}
+        {/* 문의함 */}
+        {tab === "inquiries" && (
+          <div className="bg-white rounded-xl border border-slate-200">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-800">문의함</p>
+              <span className="text-xs text-slate-400">{inquiries.length}건</span>
+            </div>
+            {inquiryLoading ? (
+              <div className="px-4 py-12 text-center text-slate-400 text-sm">불러오는 중...</div>
+            ) : inquiries.length === 0 ? (
+              <div className="px-4 py-12 text-center text-slate-400 text-sm">문의가 없습니다.</div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {inquiries.map(inq => (
+                  <div key={inq.id} className={`px-5 py-4 ${inq.isRead ? "bg-white" : "bg-green-50"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-slate-800">{inq.user.name}</span>
+                          <span className="text-xs text-slate-400">{inq.user.email}</span>
+                          {!inq.isRead && <span className="text-[10px] font-bold bg-green-500 text-white px-1.5 py-0.5 rounded-full">NEW</span>}
+                        </div>
+                        <p className="text-xs text-slate-400 mb-2">{new Date(inq.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{inq.content}</p>
+                      </div>
+                      {!inq.isRead && (
+                        <button
+                          onClick={async () => {
+                            await fetch("/api/admin/inquiries", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: inq.id }) });
+                            setInquiries(prev => prev.map(i => i.id === inq.id ? { ...i, isRead: true } : i));
+                          }}
+                          className="flex-shrink-0 text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
+                        >
+                          확인
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 미접속 수강생 관리 */}
         {tab === "inactive" && (
           <InactiveStudents students={students} onDeleted={() => {
