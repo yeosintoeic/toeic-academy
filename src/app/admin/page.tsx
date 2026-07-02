@@ -62,6 +62,7 @@ const MODE_LABEL: Record<string, string> = {
 
 export default function AdminPage() {
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
@@ -89,6 +90,24 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function load() {
+      const meRes = await fetch("/api/auth/me");
+      const meData = await meRes.json();
+      const role = meData.user?.role;
+      if (!role || (role !== "ADMIN" && role !== "VIEWER")) {
+        router.push("/dashboard");
+        return;
+      }
+      setUserRole(role);
+      if (role === "VIEWER") {
+        setTab("scores");
+        const scoreRes = await fetch("/api/admin/scores");
+        const scoreData = await scoreRes.json();
+        const validScores = Array.isArray(scoreData) ? scoreData : [];
+        setScores(validScores);
+        const uids = new Set<string>(validScores.map((s: Score) => s.user?.id || s.user?.email).filter(Boolean));
+        setExpandedStudents(uids);
+        return;
+      }
       const [stuRes, scoreRes, qRes, mgrRes] = await Promise.all([
         fetch("/api/admin/students"),
         fetch("/api/admin/scores"),
@@ -111,7 +130,7 @@ export default function AdminPage() {
       setCaptureCount(Array.isArray(capData) ? capData.length : 0);
     }
     load();
-  }, []);
+  }, [router]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -136,16 +155,20 @@ export default function AdminPage() {
 
         {/* PC 메뉴 */}
         <div className="hidden sm:flex items-center gap-4">
-          <Link href="/admin/codes" className="text-sm text-blue-600 hover:underline">코드 관리</Link>
-          <Link href="/admin/lectures" className="text-sm text-blue-600 hover:underline">강의 관리</Link>
-          <Link href="/admin/questions" className="text-sm text-blue-600 hover:underline">문제 관리</Link>
-          <Link href="/admin/captures" className="relative text-sm text-red-600 hover:underline flex items-center gap-1">
-            캡처 감지
-            {captureCount > 0 && (
-              <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
-            )}
-          </Link>
-          <Link href="/admin/saved" className="text-sm text-yellow-600 hover:underline">저장 문제</Link>
+          {userRole === "ADMIN" && (
+            <>
+              <Link href="/admin/codes" className="text-sm text-blue-600 hover:underline">코드 관리</Link>
+              <Link href="/admin/lectures" className="text-sm text-blue-600 hover:underline">강의 관리</Link>
+              <Link href="/admin/questions" className="text-sm text-blue-600 hover:underline">문제 관리</Link>
+              <Link href="/admin/captures" className="relative text-sm text-red-600 hover:underline flex items-center gap-1">
+                캡처 감지
+                {captureCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
+                )}
+              </Link>
+              <Link href="/admin/saved" className="text-sm text-yellow-600 hover:underline">저장 문제</Link>
+            </>
+          )}
           <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
         </div>
 
@@ -162,23 +185,27 @@ export default function AdminPage() {
       {menuOpen && (
         <div className="sm:hidden bg-white border-b border-slate-200 px-4 py-3 flex flex-col gap-3">
           <Link href="/dashboard" className="text-sm font-semibold text-blue-700">여신토익으로 이동</Link>
-          <Link href="/admin/codes" className="text-sm text-blue-600">코드 관리</Link>
-          <Link href="/admin/lectures" className="text-sm text-blue-600">강의 관리</Link>
-          <Link href="/admin/questions" className="text-sm text-blue-600">문제 관리</Link>
-          <Link href="/admin/captures" className="text-sm text-red-600 flex items-center gap-2">
-            캡처 감지
-            {captureCount > 0 && (
-              <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
-            )}
-          </Link>
-          <Link href="/admin/saved" className="text-sm text-yellow-600">저장 문제</Link>
+          {userRole === "ADMIN" && (
+            <>
+              <Link href="/admin/codes" className="text-sm text-blue-600">코드 관리</Link>
+              <Link href="/admin/lectures" className="text-sm text-blue-600">강의 관리</Link>
+              <Link href="/admin/questions" className="text-sm text-blue-600">문제 관리</Link>
+              <Link href="/admin/captures" className="text-sm text-red-600 flex items-center gap-2">
+                캡처 감지
+                {captureCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-red-500 text-white rounded-full">{captureCount > 99 ? "99+" : captureCount}</span>
+                )}
+              </Link>
+              <Link href="/admin/saved" className="text-sm text-yellow-600">저장 문제</Link>
+            </>
+          )}
           <button onClick={logout} className="text-sm text-red-500 text-left">로그아웃</button>
         </div>
       )}
 
       <main className="max-w-5xl mx-auto px-4 py-6">
         {/* 통계 카드 */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        {userRole === "ADMIN" && <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-xs text-slate-500">총 수강생</p>
             <p className="text-2xl font-bold text-slate-800 mt-1">{students.length}<span className="text-sm font-normal ml-1">명</span></p>
@@ -191,50 +218,56 @@ export default function AdminPage() {
             <p className="text-xs text-slate-500">등록 문제</p>
             <p className="text-2xl font-bold text-slate-800 mt-1">{questionCount}<span className="text-sm font-normal ml-1">개</span></p>
           </div>
-        </div>
+        </div>}
 
         {/* 탭 */}
         <div className="flex gap-2 mb-4 flex-wrap">
-          <button
-            onClick={() => setTab("students")}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "students" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
-          >
-            수강생 목록
-          </button>
+          {userRole === "ADMIN" && (
+            <button
+              onClick={() => setTab("students")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "students" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+            >
+              수강생 목록
+            </button>
+          )}
           <button
             onClick={() => setTab("scores")}
             className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "scores" ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
           >
             성적 현황
           </button>
-          <button
-            onClick={() => setTab("inactive")}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium relative ${tab === "inactive" ? "bg-orange-500 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
-          >
-            미접속 관리
-            {students.filter((s) => {
-              const d = s.lastLoginAt ? (Date.now() - new Date(s.lastLoginAt).getTime()) / 86400000 : Infinity;
-              return d >= 90;
-            }).length > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-orange-500 text-white rounded-full">
+          {userRole === "ADMIN" && (
+            <>
+              <button
+                onClick={() => setTab("inactive")}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium relative ${tab === "inactive" ? "bg-orange-500 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+              >
+                미접속 관리
                 {students.filter((s) => {
                   const d = s.lastLoginAt ? (Date.now() - new Date(s.lastLoginAt).getTime()) / 86400000 : Infinity;
                   return d >= 90;
-                }).length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setTab("managers")}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "managers" ? "bg-purple-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
-          >
-            매니저 목록
-            {managers.length > 0 && (
-              <span className={`ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full ${tab === "managers" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-600"}`}>
-                {managers.length}
-              </span>
-            )}
-          </button>
+                }).length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-orange-500 text-white rounded-full">
+                    {students.filter((s) => {
+                      const d = s.lastLoginAt ? (Date.now() - new Date(s.lastLoginAt).getTime()) / 86400000 : Infinity;
+                      return d >= 90;
+                    }).length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setTab("managers")}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium ${tab === "managers" ? "bg-purple-600 text-white" : "bg-white border border-slate-200 text-slate-600"}`}
+              >
+                매니저 목록
+                {managers.length > 0 && (
+                  <span className={`ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold rounded-full ${tab === "managers" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-600"}`}>
+                    {managers.length}
+                  </span>
+                )}
+              </button>
+            </>
+          )}
         </div>
 
         {/* 수강생 목록 */}

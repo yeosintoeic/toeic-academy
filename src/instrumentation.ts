@@ -1,4 +1,4 @@
-const HOMEWORK1_VERSION = "v3";
+const HOMEWORK1_VERSION = "v4";
 
 const HOMEWORK1 = [
   { questionText: "The company plans to ________ its operations into Southeast Asia next year.", optionA: "expand", optionB: "expansion", optionC: "expansive", optionD: "expanded", answer: "A", explanation: "✅ A (expand)\n❌ B (expansion) — 명사\n❌ C (expansive) — 형용사\n❌ D (expanded) — 과거형\n💡 plans to 뒤에는 동사원형이 옵니다." },
@@ -42,7 +42,7 @@ export async function register() {
       const FOREVER = new Date("9999-12-31T00:00:00.000Z");
       const TARGET_USERS = [
         { email: "dlsdn0420@naver.com", role: "ADMIN" },
-        { email: "gugua35@naver.com", role: "MANAGER" },
+        { email: "gugua35@naver.com", role: "VIEWER" },
         { email: "sohee@yeosintoeic.com", role: "MANAGER" },
       ];
 
