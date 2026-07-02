@@ -75,7 +75,27 @@ export async function POST(req: Request) {
         where: { part: 7 },
         include: { questions: { orderBy: { id: "asc" } } },
       });
-      const sel = shuffle(allG7).slice(0, 3);
+      // passageType 별로 분류: double(8문)×3 + triple(9문)×2 + quad(12문)×1 = 54문
+      const doubles = shuffle(allG7.filter(g => g.passageType === "double"));
+      const triples = shuffle(allG7.filter(g => g.passageType === "triple"));
+      const quads   = shuffle(allG7.filter(g => g.passageType === "quad"));
+
+      const sel = [
+        ...doubles.slice(0, 3),
+        ...triples.slice(0, 2),
+        ...quads.slice(0, 1),
+      ];
+
+      // 특정 타입이 부족하면 남은 타입으로 보완
+      if (sel.length < 6) {
+        const used = new Set(sel.map(g => g.id));
+        const remaining = shuffle(allG7.filter(g => !used.has(g.id)));
+        for (const g of remaining) {
+          if (sel.length >= 6) break;
+          sel.push(g);
+        }
+      }
+
       for (const g of sel) p7Ids.push(...g.questions.map(q => q.id));
     }
   }
