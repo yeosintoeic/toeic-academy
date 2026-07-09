@@ -31,6 +31,7 @@ interface TestResult {
   part7Score: number;
   totalScore: number;
   totalQuestions: number;
+  overtimeSeconds: number;
   answers: AnswerDetail[];
 }
 
@@ -60,7 +61,6 @@ function ResultContent() {
   const params = useSearchParams();
   const router = useRouter();
   const sessionId = params.get("sessionId");
-  const overtimeSeconds = parseInt(params.get("overtime") || "0", 10) || 0;
 
   const [result, setResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ function ResultContent() {
     </div>
   );
 
-  const { mode, part5Score, part6Score, part7Score, totalScore, totalQuestions, answers } = result;
+  const { mode, part5Score, part6Score, part7Score, totalScore, totalQuestions, overtimeSeconds, answers } = result;
 
   // 실제 답변 기반으로 파트별 총 문제 수 계산 (하드코딩 대신 실제 생성된 수 반영)
   const part5Total = answers.filter(a => a.question.part === 5).length;

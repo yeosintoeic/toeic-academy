@@ -321,7 +321,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
     const res = await fetch("/api/test/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId, answers: payload }),
+      body: JSON.stringify({ sessionId, answers: payload, overtimeSeconds: overtime }),
     });
 
     const data = await res.json();
@@ -332,8 +332,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
       return;
     }
 
-    const overtimeQuery = overtime > 0 ? `&overtime=${overtime}` : "";
-    router.push(`/results?sessionId=${data.sessionId}${overtimeQuery}`);
+    router.push(`/results?sessionId=${data.sessionId}`);
   }
 
   submitRef.current = handleSubmit;

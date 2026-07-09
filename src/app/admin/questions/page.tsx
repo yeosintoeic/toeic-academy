@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 interface Question {
@@ -69,6 +69,41 @@ export default function AdminQuestionsPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editMessage, setEditMessage] = useState("");
 
+  // 해설 일괄 재작성 (AI)
+  const [reformatCounts, setReformatCounts] = useState<{ part5: number; part6: number; part7: number; total: number } | null>(null);
+  const [reformatRunning, setReformatRunning] = useState(false);
+  const [reformatLog, setReformatLog] = useState<string[]>([]);
+  const reformatStopRef = useRef(false);
+
+  async function loadReformatCounts() {
+    const res = await fetch("/api/admin/reformat-explanations");
+    if (res.ok) setReformatCounts(await res.json());
+  }
+
+  async function runReformat() {
+    setReformatRunning(true);
+    reformatStopRef.current = false;
+    setReformatLog([]);
+    while (!reformatStopRef.current) {
+      const res = await fetch("/api/admin/reformat-explanations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchSize: 8 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReformatLog((prev) => [...prev, `오류: ${data.error || "알 수 없는 오류"}`]);
+        break;
+      }
+      setReformatLog((prev) => [...prev, `${data.updated}개 완료, ${data.failed.length}개 실패, 남은 문제 ${data.remaining}개`]);
+      setReformatCounts((prev) => prev ? { ...prev, total: data.remaining } : prev);
+      if (data.remaining === 0 || (data.updated === 0 && data.failed.length === 0)) break;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    setReformatRunning(false);
+    loadReformatCounts();
+  }
+
   async function loadQuestions() {
     const res = await fetch("/api/admin/questions");
     const data = await res.json();
@@ -85,6 +120,7 @@ export default function AdminQuestionsPage() {
   useEffect(() => {
     loadQuestions();
     loadGroups();
+    loadReformatCounts();
   }, []);
 
   useEffect(() => {
@@ -195,6 +231,44 @@ export default function AdminQuestionsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
+
+        {/* 해설 일괄 재작성 (AI) */}
+        <div className="bg-white border border-amber-200 rounded-xl p-5 mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="font-semibold text-slate-800 text-sm mb-1">해설 일괄 재작성 (AI)</h2>
+              <p className="text-xs text-slate-500">
+                숙제 해설처럼 보기별 상세 형식(✅/❌/💡)으로 재작성합니다.
+                {reformatCounts && (
+                  <span className="ml-1">
+                    남은 문제: 전체 {reformatCounts.total}개 (Part5 {reformatCounts.part5} · Part6 {reformatCounts.part6} · Part7 {reformatCounts.part7})
+                  </span>
+                )}
+              </p>
+            </div>
+            {reformatRunning ? (
+              <button
+                onClick={() => { reformatStopRef.current = true; }}
+                className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-red-700"
+              >
+                중지
+              </button>
+            ) : (
+              <button
+                onClick={runReformat}
+                disabled={!reformatCounts || reformatCounts.total === 0}
+                className="bg-amber-500 text-white text-sm px-4 py-2 rounded-lg hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {reformatCounts?.total === 0 ? "모두 완료됨" : "실행"}
+              </button>
+            )}
+          </div>
+          {reformatLog.length > 0 && (
+            <div className="mt-3 bg-slate-50 rounded-lg p-3 max-h-32 overflow-y-auto text-xs text-slate-600 font-mono space-y-0.5">
+              {reformatLog.map((line, i) => <div key={i}>{line}</div>)}
+            </div>
+          )}
+        </div>
 
         {/* 수정 폼 */}
         {editingId && (

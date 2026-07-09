@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return Response.json({ error: "로그인 필요" }, { status: 401 });
 
-  const { sessionId, answers } = await req.json();
+  const { sessionId, answers, overtimeSeconds } = await req.json();
   // answers: { questionId: string; selected: string }[]
 
   const testSession = await prisma.testSession.findUnique({
@@ -47,9 +47,10 @@ export async function POST(req: NextRequest) {
   await prisma.testAnswer.createMany({ data: answerRecords });
 
   const totalScore = part5Score + part6Score + part7Score;
+  const safeOvertimeSeconds = Number.isFinite(overtimeSeconds) && overtimeSeconds > 0 ? Math.floor(overtimeSeconds) : 0;
   await prisma.testSession.update({
     where: { id: sessionId },
-    data: { completedAt: new Date(), part5Score, part6Score, part7Score, totalScore },
+    data: { completedAt: new Date(), part5Score, part6Score, part7Score, totalScore, overtimeSeconds: safeOvertimeSeconds },
   });
 
   return Response.json({ part5Score, part6Score, part7Score, totalScore, total: questions.length, sessionId });
