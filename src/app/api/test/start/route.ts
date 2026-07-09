@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   if (mode === "homework1" || mode === "homework2") {
     const setNum = mode === "homework1" ? 1 : 2;
     const hwQuestions = await prisma.question.findMany({
-      where: { part: 5, homeworkSet: setNum },
+      where: { homeworkSet: setNum },
       orderBy: { homeworkOrder: "asc" },
     });
 

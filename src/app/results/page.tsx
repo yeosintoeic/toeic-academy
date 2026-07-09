@@ -60,6 +60,7 @@ function ResultContent() {
   const params = useSearchParams();
   const router = useRouter();
   const sessionId = params.get("sessionId");
+  const overtimeSeconds = parseInt(params.get("overtime") || "0", 10) || 0;
 
   const [result, setResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,9 +139,14 @@ function ResultContent() {
                 <span className="text-6xl font-bold text-blue-600">{partScore[mode]}</span>
                 <span className="text-2xl font-semibold text-blue-400"> / {partTotal[mode]}점</span>
               </div>
-              <p className="text-slate-400 text-sm mb-6">
+              <p className="text-slate-400 text-sm mb-2">
                 정답률 {pct}%
               </p>
+              {overtimeSeconds > 0 && (
+                <p className="inline-block text-xs font-semibold text-red-600 bg-red-50 rounded-lg px-3 py-1.5 mb-4">
+                  시간 {Math.floor(overtimeSeconds / 60)}분 {overtimeSeconds % 60}초 초과했습니다
+                </p>
+              )}
               <div className="bg-slate-50 rounded-xl p-5 mb-6">
                 <div className="w-full bg-slate-200 rounded-full h-3 mb-2">
                   <div

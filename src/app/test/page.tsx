@@ -51,13 +51,23 @@ type Mode = "full" | "part5" | "part6" | "part7" | "homework1" | "homework2";
 
 const HOMEWORK_MODES: Mode[] = ["homework1", "homework2"];
 
+// Part 단독 연습 모드: 시간이 끝나도 자동 제출하지 않고 초과 시간을 표시한다
+const STANDALONE_PART_MODES: Mode[] = ["part5", "part6", "part7"];
+
 const MODE_TIMER: Record<Mode, number> = {
-  full: 75 * 60,
-  part5: 25 * 60,
-  part6: 15 * 60,
-  part7: 55 * 60,
-  homework1: 25 * 60,
-  homework2: 25 * 60,
+  full: 65 * 60,
+  part5: 6 * 60,
+  part6: 9 * 60,
+  part7: 50 * 60,
+  homework1: 6 * 60,
+  homework2: 6 * 60,
+};
+
+// 숙제는 실제 문제의 Part에 맞춰 시간을 동적으로 맞춘다
+const PART_TIMER: Record<number, number> = {
+  5: MODE_TIMER.part5,
+  6: MODE_TIMER.part6,
+  7: MODE_TIMER.part7,
 };
 
 const MODE_LABEL: Record<Mode, string> = {
@@ -167,7 +177,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base">실전 모의고사</div>
-          <div className="text-xs text-blue-200 mt-0.5">Part 5+6+7 · 100문제 · 75분</div>
+          <div className="text-xs text-blue-200 mt-0.5">Part 5+6+7 · 100문제 · 65분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part5")}
@@ -229,6 +239,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(MODE_TIMER[mode]);
+  const [overtime, setOvertime] = useState(0);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [todaySaveCount, setTodaySaveCount] = useState(0);
   const [kickedDetected, setKickedDetected] = useState(false);
@@ -321,7 +332,8 @@ function TestQuiz({ mode }: { mode: Mode }) {
       return;
     }
 
-    router.push(`/results?sessionId=${data.sessionId}`);
+    const overtimeQuery = overtime > 0 ? `&overtime=${overtime}` : "";
+    router.push(`/results?sessionId=${data.sessionId}${overtimeQuery}`);
   }
 
   submitRef.current = handleSubmit;
@@ -342,6 +354,10 @@ function TestQuiz({ mode }: { mode: Mode }) {
       setSessionId(data.sessionId);
       setQuestions(data.questions);
       setOptionOrders(buildShuffledOptions(data.questions, !HOMEWORK_MODES.includes(mode)));
+      if (HOMEWORK_MODES.includes(mode) && data.questions.length > 0) {
+        const part = data.questions[0].part;
+        if (PART_TIMER[part]) setTimeLeft(PART_TIMER[part]);
+      }
       setLoading(false);
     }
     startTest();
@@ -355,12 +371,21 @@ function TestQuiz({ mode }: { mode: Mode }) {
     return () => clearTimeout(timer);
   }, [timeLeft, loading, submitting]);
 
-  // 시간 종료 시 자동 제출
+  // Part 단독연습: 시간이 끝나면 자동 제출하지 않고 초과 시간을 계속 카운트
   useEffect(() => {
-    if (timeLeft === 0 && !loading) {
+    if (loading || submitting) return;
+    if (timeLeft > 0) return;
+    if (!STANDALONE_PART_MODES.includes(mode)) return;
+    const timer = setTimeout(() => setOvertime((t) => t + 1), 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft, overtime, loading, submitting, mode]);
+
+  // 시간 종료 시 자동 제출 (Part 단독연습 제외)
+  useEffect(() => {
+    if (timeLeft === 0 && !loading && !STANDALONE_PART_MODES.includes(mode)) {
       submitRef.current();
     }
-  }, [timeLeft, loading]);
+  }, [timeLeft, loading, mode]);
 
   function selectAnswer(questionId: string, option: string) {
     setAnswers((prev) => ({ ...prev, [questionId]: option }));
@@ -395,8 +420,9 @@ function TestQuiz({ mode }: { mode: Mode }) {
     { displayKey: "D", originalKey: "D", text: q.optionD },
   ];
 
+  const isOvertime = timeLeft <= 0 && STANDALONE_PART_MODES.includes(mode);
   const timerWarning = timeLeft < 5 * 60;
-  const timerDanger = timeLeft < 2 * 60;
+  const timerDanger = timeLeft < 2 * 60 || isOvertime;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -415,7 +441,7 @@ function TestQuiz({ mode }: { mode: Mode }) {
             timerWarning ? "bg-yellow-100 text-yellow-700" :
             "bg-slate-100 text-slate-700"
           }`}>
-            {formatTime(timeLeft)}
+            {isOvertime ? `+${formatTime(overtime)} 초과` : formatTime(timeLeft)}
           </span>
         </div>
       </header>

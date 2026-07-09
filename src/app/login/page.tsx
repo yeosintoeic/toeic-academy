@@ -80,7 +80,7 @@ export default function LoginPage() {
               <div className="text-blue-200 text-xs">실전형 문제</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5 backdrop-blur-sm">
-              <div className="text-3xl font-bold mb-2">75분</div>
+              <div className="text-3xl font-bold mb-2">65분</div>
               <div className="text-blue-200 text-xs">타이머 모드</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5 backdrop-blur-sm">
