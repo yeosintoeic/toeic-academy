@@ -184,21 +184,21 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 5 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">단문 빈칸 · 30문제 · 25분</div>
+          <div className="text-xs text-slate-400 mt-0.5">단문 빈칸 · 30문제 · 6분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part6")}
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 6 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">장문 빈칸 · 16문제 · 15분</div>
+          <div className="text-xs text-slate-400 mt-0.5">장문 빈칸 · 16문제 · 9분</div>
         </button>
         <button
           onClick={() => router.push("/test?mode=part7")}
           className="w-full bg-white hover:bg-slate-50 border border-slate-200 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-slate-800">Part 7 집중연습</div>
-          <div className="text-xs text-slate-400 mt-0.5">2중·3중·4중 지문 · 54문제 · 55분</div>
+          <div className="text-xs text-slate-400 mt-0.5">2중·3중·4중 지문 · 54문제 · 50분</div>
         </button>
 
         {/* 숙제 버튼 */}
@@ -207,7 +207,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-amber-50 hover:bg-amber-100 border border-amber-300 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-amber-800">숙제</div>
-          <div className="text-xs text-amber-500 mt-0.5">Part 5 고정 문제지 · 30문제 · 25분</div>
+          <div className="text-xs text-amber-500 mt-0.5">고정 문제지 · Part에 맞는 제한시간</div>
         </button>
 
         {/* 시험 기록 버튼 */}
