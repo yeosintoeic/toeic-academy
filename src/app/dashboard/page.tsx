@@ -228,6 +228,15 @@ function DashboardContent() {
 
       <main className="max-w-4xl mx-auto px-6 py-8">
 
+        {/* 메인 배너 */}
+        <button
+          type="button"
+          onClick={() => router.push("/register")}
+          className="block w-full mb-6 rounded-xl overflow-hidden border border-slate-200 hover:opacity-95 transition-opacity"
+        >
+          <img src="/banners/summer-special.jpg" alt="여름방학 토익특강 초특가 할인" className="w-full h-auto block" />
+        </button>
+
         {/* 만료/접근 불가 알림 */}
         {(expired || noAccess) && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 mb-6 text-sm text-red-700">
