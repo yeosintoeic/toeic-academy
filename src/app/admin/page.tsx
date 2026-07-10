@@ -580,17 +580,29 @@ export default function AdminPage() {
                         <p className="text-xs text-slate-400 mb-2">{new Date(inq.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                         <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{inq.content}</p>
                       </div>
-                      {!inq.isRead && (
+                      <div className="flex-shrink-0 flex items-center gap-1.5">
+                        {!inq.isRead && (
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/admin/inquiries", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: inq.id }) });
+                              setInquiries(prev => prev.map(i => i.id === inq.id ? { ...i, isRead: true } : i));
+                            }}
+                            className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
+                          >
+                            확인
+                          </button>
+                        )}
                         <button
                           onClick={async () => {
-                            await fetch("/api/admin/inquiries", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: inq.id }) });
-                            setInquiries(prev => prev.map(i => i.id === inq.id ? { ...i, isRead: true } : i));
+                            if (!confirm("이 문의를 삭제하시겠습니까?")) return;
+                            await fetch("/api/admin/inquiries", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: inq.id }) });
+                            setInquiries(prev => prev.filter(i => i.id !== inq.id));
                           }}
-                          className="flex-shrink-0 text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
+                          className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
                         >
-                          확인
+                          삭제
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))}

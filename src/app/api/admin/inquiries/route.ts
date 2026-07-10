@@ -27,3 +27,16 @@ export async function PATCH(req: Request) {
   await prisma.inquiry.update({ where: { id }, data: { isRead: true } });
   return Response.json({ ok: true });
 }
+
+export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return Response.json({ error: "권한 없음" }, { status: 403 });
+  }
+
+  const { id } = await req.json();
+  if (!id) return Response.json({ error: "id 필요" }, { status: 400 });
+
+  await prisma.inquiry.delete({ where: { id } });
+  return Response.json({ ok: true });
+}
