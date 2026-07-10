@@ -69,10 +69,6 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [kickedDetected, setKickedDetected] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(true);
-  const [inquiryOpen, setInquiryOpen] = useState(false);
-  const [inquiryText, setInquiryText] = useState("");
-  const [inquirySending, setInquirySending] = useState(false);
-  const [inquiryDone, setInquiryDone] = useState(false);
 
   const expired = params.get("expired") === "1";
   const noAccess = params.get("noaccess");
@@ -172,59 +168,17 @@ function DashboardContent() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-600">{user?.name}님</span>
-          <button onClick={() => { setInquiryOpen(true); setInquiryDone(false); setInquiryText(""); }} className="text-xs px-2.5 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+          <a
+            href="https://open.kakao.com/o/sOJYNoDi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs px-2.5 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
             문의
-          </button>
+          </a>
           <button onClick={logout} className="text-sm text-slate-500 hover:text-red-500">로그아웃</button>
         </div>
       </header>
-
-      {/* 문의 모달 */}
-      {inquiryOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4" onClick={() => setInquiryOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold text-slate-800 mb-1">문의하기</h2>
-            <p className="text-xs text-slate-400 mb-4">관리자에게 문의사항을 전달합니다.</p>
-            {inquiryDone ? (
-              <div className="text-center py-6">
-                <p className="text-green-600 font-semibold text-sm">문의가 전달되었습니다!</p>
-                <p className="text-xs text-slate-400 mt-1">관리자가 확인 후 연락드립니다.</p>
-                <button onClick={() => setInquiryOpen(false)} className="mt-4 text-sm px-4 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200">닫기</button>
-              </div>
-            ) : (
-              <>
-                <textarea
-                  value={inquiryText}
-                  onChange={e => setInquiryText(e.target.value)}
-                  placeholder="문의 내용을 입력해주세요. (최대 1000자)"
-                  rows={5}
-                  maxLength={1000}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-xs text-slate-400">{inquiryText.length}/1000</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => setInquiryOpen(false)} className="text-sm px-4 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200">취소</button>
-                    <button
-                      onClick={async () => {
-                        if (!inquiryText.trim()) return;
-                        setInquirySending(true);
-                        const res = await fetch("/api/inquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: inquiryText }) });
-                        setInquirySending(false);
-                        if (res.ok) setInquiryDone(true);
-                      }}
-                      disabled={inquirySending || !inquiryText.trim()}
-                      className="text-sm px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
-                    >
-                      {inquirySending ? "전송 중..." : "전송"}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       <main className="max-w-4xl mx-auto px-6 py-8">
 
