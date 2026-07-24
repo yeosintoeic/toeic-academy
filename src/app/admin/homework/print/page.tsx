@@ -95,9 +95,9 @@ function PrintContent() {
         {part5.length > 0 && (
           <section className="mb-5">
             <h3 className="font-bold border-b border-slate-800 pb-1 mb-2">Part 5</h3>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+            <div className="columns-2 gap-8">
               {part5.map((q) => (
-                <div key={q.id} className="break-inside-avoid">
+                <div key={q.id} className="break-inside-avoid-column mb-2">
                   <p className="font-medium">{displayNumber.get(q.id)}. {q.questionText}</p>
                   <p className="text-slate-700 pl-3">
                     (A) {q.optionA} &nbsp; (B) {q.optionB} &nbsp; (C) {q.optionC} &nbsp; (D) {q.optionD}
@@ -112,15 +112,15 @@ function PrintContent() {
           <section className="mb-5">
             <h3 className="font-bold border-b border-slate-800 pb-1 mb-2">Part 6</h3>
             {groupedByPassage(part6).map((chunk, ci) => (
-              <div key={ci} className="mb-3 break-inside-avoid">
+              <div key={ci} className="mb-3">
                 {chunk.group && (
-                  <div className="border border-slate-300 rounded p-2 mb-1.5 whitespace-pre-wrap text-slate-800">
+                  <div className="border border-slate-300 rounded p-2 mb-1.5 whitespace-pre-wrap text-slate-800 break-inside-avoid">
                     {chunk.group.passageText}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                <div className="columns-2 gap-8">
                   {chunk.items.map((q) => (
-                    <div key={q.id}>
+                    <div key={q.id} className="break-inside-avoid-column mb-2">
                       <p className="font-medium">{displayNumber.get(q.id)}. {q.questionText}</p>
                       <p className="text-slate-700 pl-3">
                         (A) {q.optionA} &nbsp; (B) {q.optionB} &nbsp; (C) {q.optionC} &nbsp; (D) {q.optionD}
@@ -137,15 +137,15 @@ function PrintContent() {
           <section className="mb-5">
             <h3 className="font-bold border-b border-slate-800 pb-1 mb-2">Part 7</h3>
             {groupedByPassage(part7).map((chunk, ci) => (
-              <div key={ci} className="mb-3 break-inside-avoid">
+              <div key={ci} className="mb-3">
                 {chunk.group && (
-                  <div className="border border-slate-300 rounded p-2 mb-1.5 whitespace-pre-wrap text-slate-800">
+                  <div className="border border-slate-300 rounded p-2 mb-1.5 whitespace-pre-wrap text-slate-800 break-inside-avoid">
                     {chunk.group.passageText}
                   </div>
                 )}
                 <div className="space-y-2">
                   {chunk.items.map((q) => (
-                    <div key={q.id}>
+                    <div key={q.id} className="break-inside-avoid">
                       <p className="font-medium">{displayNumber.get(q.id)}. {q.questionText}</p>
                       <p className="text-slate-700 pl-3">
                         (A) {q.optionA} &nbsp; (B) {q.optionB} &nbsp; (C) {q.optionC} &nbsp; (D) {q.optionD}
