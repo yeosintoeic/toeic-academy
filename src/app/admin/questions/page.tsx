@@ -104,6 +104,32 @@ export default function AdminQuestionsPage() {
     loadReformatCounts();
   }
 
+  // 숙제 세트 재구성 (Part5 30 + Part6 16 + Part7 54 = 100문제)
+  interface HomeworkSetCounts { part5: number; part6: number; part7: number; total: number }
+  const [homeworkCounts, setHomeworkCounts] = useState<{ set1: HomeworkSetCounts; set2: HomeworkSetCounts } | null>(null);
+  const [homeworkRunning, setHomeworkRunning] = useState(false);
+  const [homeworkMessage, setHomeworkMessage] = useState("");
+
+  async function loadHomeworkCounts() {
+    const res = await fetch("/api/admin/homework");
+    if (res.ok) setHomeworkCounts(await res.json());
+  }
+
+  async function runHomeworkRebuild() {
+    if (!confirm("기존 숙제 1/2번 구성을 지우고 Part5 30 + Part6 16 + Part7 54 = 100문제로 다시 만듭니다. 계속할까요?")) return;
+    setHomeworkRunning(true);
+    setHomeworkMessage("");
+    const res = await fetch("/api/admin/homework", { method: "POST" });
+    const data = await res.json();
+    setHomeworkRunning(false);
+    if (!res.ok) {
+      setHomeworkMessage(`오류: ${data.error || "알 수 없는 오류"}`);
+      return;
+    }
+    setHomeworkCounts({ set1: data.set1, set2: data.set2 });
+    setHomeworkMessage(`완료: 숙제1 ${data.set1.total}문제, 숙제2 ${data.set2.total}문제`);
+  }
+
   async function loadQuestions() {
     const res = await fetch("/api/admin/questions");
     const data = await res.json();
@@ -121,6 +147,7 @@ export default function AdminQuestionsPage() {
     loadQuestions();
     loadGroups();
     loadReformatCounts();
+    loadHomeworkCounts();
   }, []);
 
   useEffect(() => {
@@ -267,6 +294,34 @@ export default function AdminQuestionsPage() {
             <div className="mt-3 bg-slate-50 rounded-lg p-3 max-h-32 overflow-y-auto text-xs text-slate-600 font-mono space-y-0.5">
               {reformatLog.map((line, i) => <div key={i}>{line}</div>)}
             </div>
+          )}
+        </div>
+
+        {/* 숙제 세트 재구성 */}
+        <div className="bg-white border border-blue-200 rounded-xl p-5 mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="font-semibold text-slate-800 text-sm mb-1">숙제 세트 재구성 (Part5+6+7, 100문제)</h2>
+              <p className="text-xs text-slate-500">
+                저장된 문제 풀에서 Part5 30 + Part6 16 + Part7 54문제를 뽑아 숙제 1번/2번을 다시 구성합니다.
+                {homeworkCounts && (
+                  <span className="ml-1">
+                    현재 — 숙제1: {homeworkCounts.set1.total}문제 (5:{homeworkCounts.set1.part5} 6:{homeworkCounts.set1.part6} 7:{homeworkCounts.set1.part7}) ·
+                    숙제2: {homeworkCounts.set2.total}문제 (5:{homeworkCounts.set2.part5} 6:{homeworkCounts.set2.part6} 7:{homeworkCounts.set2.part7})
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={runHomeworkRebuild}
+              disabled={homeworkRunning}
+              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            >
+              {homeworkRunning ? "재구성 중..." : "재구성 실행"}
+            </button>
+          </div>
+          {homeworkMessage && (
+            <p className="mt-3 text-xs text-slate-600">{homeworkMessage}</p>
           )}
         </div>
 

@@ -207,7 +207,7 @@ function ModeSelect({ onHistory }: { onHistory: () => void }) {
           className="w-full bg-amber-50 hover:bg-amber-100 border border-amber-300 font-semibold px-6 py-4 rounded-xl transition-colors text-left"
         >
           <div className="text-base text-amber-800">숙제</div>
-          <div className="text-xs text-amber-500 mt-0.5">고정 문제지 · Part에 맞는 제한시간</div>
+          <div className="text-xs text-amber-500 mt-0.5">고정 문제지 · Part 5+6+7 · 100문제 · 65분</div>
         </button>
 
         {/* 시험 기록 버튼 */}
@@ -354,8 +354,13 @@ function TestQuiz({ mode }: { mode: Mode }) {
       setQuestions(data.questions);
       setOptionOrders(buildShuffledOptions(data.questions, !HOMEWORK_MODES.includes(mode)));
       if (HOMEWORK_MODES.includes(mode) && data.questions.length > 0) {
-        const part = data.questions[0].part;
-        if (PART_TIMER[part]) setTimeLeft(PART_TIMER[part]);
+        const parts = new Set<number>(data.questions.map((q: Question) => q.part));
+        if (parts.size === 1) {
+          const part = data.questions[0].part;
+          if (PART_TIMER[part]) setTimeLeft(PART_TIMER[part]);
+        } else {
+          setTimeLeft(MODE_TIMER.full);
+        }
       }
       setLoading(false);
     }
