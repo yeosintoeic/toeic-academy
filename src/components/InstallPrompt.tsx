@@ -72,7 +72,7 @@ export default function InstallPrompt() {
   if (!visible || !mode) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
+    <div className="print:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-lg px-5 py-4">
         <div className="flex items-start justify-between gap-3 mb-3">
           <p className="text-sm font-semibold text-slate-800">여신토익 앱 설치</p>

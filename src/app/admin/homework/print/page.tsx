@@ -93,7 +93,7 @@ function PrintContent() {
         </div>
 
         {part5.length > 0 && (
-          <section className="mb-5 break-inside-avoid">
+          <section className="mb-5">
             <h3 className="font-bold border-b border-slate-800 pb-1 mb-2">Part 5</h3>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2">
               {part5.map((q) => (
