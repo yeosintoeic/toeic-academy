@@ -158,17 +158,6 @@ function PrintContent() {
           </section>
         )}
 
-        {/* 정답표 (교사용) */}
-        <section className="mt-8 pt-4 border-t-2 border-dashed border-slate-400 break-before-page">
-          <h3 className="font-bold mb-2">정답표 (교사용)</h3>
-          <div className="grid grid-cols-10 gap-1 text-xs">
-            {questions.map((q) => (
-              <div key={q.id} className="border border-slate-200 rounded px-1 py-0.5 text-center">
-                <span className="text-slate-400">{displayNumber.get(q.id)}</span> {q.answer}
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );
