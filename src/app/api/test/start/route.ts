@@ -15,6 +15,28 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+// 그룹들(지문별 문제 수가 제각각) 중 문제 수 합이 정확히 target이 되는 조합을 무작위 탐색으로 찾는다.
+// passageType 라벨이 일정하지 않아도(예: "double passage", "notice+email" 등) 항상 목표 문제수를 채울 수 있다.
+function pickGroupsForTarget<T extends { size: number }>(
+  groups: T[],
+  target: number,
+  maxAttempts = 500
+): T[] | null {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const shuffled = shuffle(groups);
+    const picked: T[] = [];
+    let sum = 0;
+    for (const g of shuffled) {
+      if (sum + g.size <= target) {
+        picked.push(g);
+        sum += g.size;
+        if (sum === target) return picked;
+      }
+    }
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return Response.json({ error: "로그인 필요" }, { status: 401 });
@@ -98,26 +120,9 @@ export async function POST(req: Request) {
         where: { part: 7 },
         include: { questions: { orderBy: { id: "asc" } } },
       });
-      // passageType 별로 분류: double(8문)×3 + triple(9문)×2 + quad(12문)×1 = 54문
-      const doubles = shuffle(allG7.filter(g => g.passageType === "double"));
-      const triples = shuffle(allG7.filter(g => g.passageType === "triple"));
-      const quads   = shuffle(allG7.filter(g => g.passageType === "quad"));
-
-      const sel = [
-        ...doubles.slice(0, 3),
-        ...triples.slice(0, 2),
-        ...quads.slice(0, 1),
-      ];
-
-      // 특정 타입이 부족하면 남은 타입으로 보완
-      if (sel.length < 6) {
-        const used = new Set(sel.map(g => g.id));
-        const remaining = shuffle(allG7.filter(g => !used.has(g.id)));
-        for (const g of remaining) {
-          if (sel.length >= 6) break;
-          sel.push(g);
-        }
-      }
+      // 지문별 문제 수가 제각각이므로(passageType 라벨과 무관하게) 합이 정확히 54가 되는 조합을 찾는다
+      const pool = allG7.map(g => ({ id: g.id, size: g.questions.length, questions: g.questions }));
+      const sel = pickGroupsForTarget(pool, 54) ?? pool; // 조합을 못 찾으면 전체 풀에서 최대한 채움
 
       for (const g of sel) p7Ids.push(...g.questions.map(q => q.id));
     }
