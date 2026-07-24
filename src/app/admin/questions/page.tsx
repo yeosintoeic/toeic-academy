@@ -312,13 +312,21 @@ export default function AdminQuestionsPage() {
                 )}
               </p>
             </div>
-            <button
-              onClick={runHomeworkRebuild}
-              disabled={homeworkRunning}
-              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              {homeworkRunning ? "재구성 중..." : "재구성 실행"}
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link href="/admin/homework/print?set=1" target="_blank" className="text-sm px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+                숙제1 인쇄
+              </Link>
+              <Link href="/admin/homework/print?set=2" target="_blank" className="text-sm px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50">
+                숙제2 인쇄
+              </Link>
+              <button
+                onClick={runHomeworkRebuild}
+                disabled={homeworkRunning}
+                className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {homeworkRunning ? "재구성 중..." : "재구성 실행"}
+              </button>
+            </div>
           </div>
           {homeworkMessage && (
             <p className="mt-3 text-xs text-slate-600">{homeworkMessage}</p>
